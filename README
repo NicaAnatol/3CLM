@@ -1,0 +1,40 @@
+# ELMC 3D - 3D Modeling Platform from Geospatial Data
+
+## Overview
+
+ELMC 3D is a progressive web application (PWA) that allows users to generate, edit, and share 3D urban models based on real geospatial data from OpenStreetMap. Users can select a geographic area on an interactive map, choose desired element types (buildings, roads, water bodies, natural areas, landuse), and the system automatically generates an editable 3D model in GLB format.
+
+## Features
+
+- Interactive map with area selection using Leaflet
+- Automatic 3D model generation from OpenStreetMap data
+- Advanced 3D editor with granular element editing (Three.js)
+- User authentication with JWT tokens
+- Public workshop for sharing models
+- Favorites system for public models
+- Statistics tracking (views, downloads, favorites)
+- PWA offline support with Service Worker
+- RESTful API with Swagger documentation
+
+## Technology Stack
+
+- Backend: Django 5.2, Django REST Framework
+- Database: MongoDB Atlas with MongoEngine ODM
+- Frontend: HTML5, CSS3, JavaScript (ES6+), Three.js, Leaflet
+- Authentication: JWT tokens stored in MongoDB
+- PWA: Service Worker + Manifest.json
+- API Documentation: OpenAPI 3.0 + Swagger UI + Redoc
+
+## Prerequisites
+
+- Python 3.11 or higher
+- MongoDB Atlas account (or local MongoDB instance)
+- Git
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/anatolnica/elmc-3d.git
+cd elmc-3d/ELMC
