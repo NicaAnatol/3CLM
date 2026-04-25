@@ -33,7 +33,6 @@ migrations/
 !*/migrations/__init__.py
 media/
 staticfiles/
-static/
 *.pid
 
 # ============================================
