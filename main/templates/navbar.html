@@ -1,0 +1,154 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/navbar.css' %}">
+<nav class="navbar">
+    <div class="navbar-container">
+        <div class="navbar-brand">
+            <a href="/home/" class="logo-link">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <div class="logo-text">ELMC 3D</div>
+                </div>
+            </a>
+        </div>
+
+        <div class="navbar-desktop">
+            <div class="nav-links">
+                <a href="/home/" class="nav-link {% if request.path == '/home/' %}active{% endif %}">
+                    <i class="fas fa-home"></i> Home
+                </a>
+                <a href="/workshop/" class="nav-link {% if '/workshop/' in request.path %}active{% endif %}">
+                    <i class="fas fa-cube"></i> Workshop
+                </a>
+                <a href="/" class="nav-link {% if '/map/' in request.path %}active{% endif %}">
+                    <i class="fas fa-map"></i> Services
+                </a>
+            </div>
+
+            <div class="navbar-auth">
+                <div id="authSection" class="auth-section">
+                    <a href="/auth/" class="auth-btn signup-btn" id="authButton">
+                        <i class="fas fa-user-plus"></i> Sign-up
+                    </a>
+                </div>
+
+                <div id="userInfo" class="user-profile-menu">
+                    <div class="user-avatar" id="userAvatarBtn">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcStltpfa69E9JTQOf5ZcyLGR8meBbxMFJxM0w&s" 
+                             alt="User Avatar"
+                             class="avatar-img"
+                             id="userAvatar">
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="dropdown-header">
+                            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcStltpfa69E9JTQOf5ZcyLGR8meBbxMFJxM0w&s" 
+                                 alt="User Avatar"
+                                 class="dropdown-avatar"
+                                 id="dropdownAvatar">
+                            <div class="dropdown-user-info">
+                                <strong id="dropdownUserName">User</strong>
+                                <small id="dropdownUserEmail">email@example.com</small>
+                            </div>
+                        </div>
+                        <a href="/account/" class="dropdown-item" onclick="openAccountTab(event, 'models')">
+                            <i class="fas fa-user"></i> My Account
+                        </a>
+                        <a href="/account/" class="dropdown-item" onclick="openAccountTab(event, 'models')">
+                            <i class="fas fa-cube"></i> My Models
+                        </a>
+                        <a href="/account/" class="dropdown-item" onclick="openAccountTab(event, 'favorites')">
+                            <i class="fas fa-heart"></i> Favorites
+                        </a>
+                        <a href="/account/" class="dropdown-item" onclick="openAccountTab(event, 'settings')">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item logout-btn" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="navbar-mobile">
+            <button id="hamburgerBtn" class="hamburger" aria-controls="mobileMenu" aria-expanded="false" aria-label="Open menu">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 6h16M4 12h16M4 18h16" stroke="#e2e8f0" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div id="mobileWrap" class="mobile-menu-wrap" aria-hidden="true">
+    <div class="overlay-navbar" id="overlay-navbar"></div>
+
+    <aside id="mobileMenu" class="mobile-menu" role="dialog" aria-modal="true" aria-label="Main menu">
+        <header>
+            <div>
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <div class="logo-text">ELMC 3D</div>
+                </div>
+            </div>
+            <button id="closeBtn" aria-label="Close menu" style="background:none;border:0;padding:.25rem;border-radius:6px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 6l12 12M6 18L18 6" stroke="#e2e8f0" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </header>
+
+        <nav class="sidebar-links">
+            <a href="/home/" class="sidebar-link {% if request.path == '/home/' %}active{% endif %}">
+                <i class="fas fa-home"></i> Home
+            </a>
+            <a href="/workshop/" class="sidebar-link {% if '/workshop/' in request.path %}active{% endif %}">
+                <i class="fas fa-cube"></i> Workshop
+            </a>
+            <a href="/" class="sidebar-link {% if request.path == '/' or '/map/' in request.path %}active{% endif %}">
+                <i class="fas fa-map"></i> Services
+            </a>
+        </nav>
+
+        <div class="sidebar-auth">
+            <div id="mobileAuthSection" class="sidebar-auth-section">
+                <a href="/auth/" class="sidebar-link signup-btn">
+                    <i class="fas fa-user-plus"></i> Sign-up
+                </a>
+            </div>
+
+            <div id="mobileUserInfo" class="sidebar-auth-section" style="display: none;">
+                <div class="sidebar-user">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcStltpfa69E9JTQOf5ZcyLGR8meBbxMFJxM0w&s" 
+                         alt="User Avatar"
+                         class="sidebar-avatar"
+                         id="mobileUserAvatar">
+                    <div class="sidebar-user-info">
+                        <strong id="mobileUserName">User</strong>
+                        <small id="mobileUserEmail">email@example.com</small>
+                    </div>
+                </div>
+                <a href="/account/" class="sidebar-link" onclick="openAccountTab(event, 'models')">
+                    <i class="fas fa-user"></i> My Account
+                </a>
+                <a href="/account/" class="sidebar-link" onclick="openAccountTab(event, 'models')">
+                    <i class="fas fa-cube"></i> My Models
+                </a>
+                <a href="/account/" class="sidebar-link" onclick="openAccountTab(event, 'favorites')">
+                    <i class="fas fa-heart"></i> Favorites
+                </a>                
+                <a href="/account/" class="sidebar-link" onclick="openAccountTab(event, 'settings')">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+                <button class="sidebar-link logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+    </aside>
+</div>
+<script src="{% static 'js/navbar.js' %}"></script>

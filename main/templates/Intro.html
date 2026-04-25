@@ -1,0 +1,354 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELMC 3D - Transform Maps into 3D Models</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='white' d='M239.1 6.3l-208 78c-18.7 7-31.1 25-31.1 45v225.1c0 18.2 10.3 34.8 26.5 42.9l208 104c13.5 6.8 29.4 6.8 42.9 0l208-104c16.3-8.1 26.5-24.8 26.5-42.9V129.3c0-20-12.4-37.9-31.1-44.9l-208-78C262 2.2 250 2.2 239.1 6.3zM256 68.4l192 72v1.1l-192 78-192-78v-1.1l192-72zm32 356V275.5l160-65v133.9l-160 80z'/></svg>" type="image/svg+xml">
+    <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
+<meta name="theme-color" content="#667eea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ELMC 3D">
+<link rel="apple-touch-icon" href="{% static 'pwa/icon-192x192.png' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/intro.css' %}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+    </div>
+    {% include 'navbar.html' %}
+
+    <div class="bg-hero">
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title floating">
+                Bring Maps to Life<br>in Stunning 3D
+            </h1>
+            <p class="hero-subtitle">
+                ELMC 3D transforms geographic data into immersive, detailed 3D models that tell stories. 
+                Wherever your imagination takes you, we provide the canvas.
+            </p>
+            <div class="hero-buttons">
+                <a href="/home/" class="btn btn-primary">
+                    <i class="fas fa-map-marked-alt"></i> Start Your Journey
+                </a>
+                <a href="/account/" class="btn btn-secondary">
+                    <i class="fas fas fa-user-circle"></i> Create an Account
+                </a>
+            </div>
+        </div>
+    </div>
+        <div class="model-container">
+            <canvas id="threeCanvas"></canvas>
+        </div>
+    </section>
+    <section class="features" id="features">
+        <div class="section-header">
+            <h2 class="section-title">More Than Just Features</h2>
+            <p class="section-subtitle">
+                We build tools that inspire creativity, empower visionaries, and transform how we see our world. 
+                Every feature is designed with purpose and passion.
+            </p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-globe-americas"></i>
+                </div>
+                <h3 class="feature-title">The World at Your Fingertips</h3>
+                <p class="feature-description">
+                    Access every corner of our planet with stunning precision. From bustling city centers to remote landscapes, 
+                    transform any location into a living, breathing 3D environment that tells its unique story.
+                </p>
+                <div class="feature-highlight">
+                    <i class="fas fa-sync-alt"></i>
+                    Real-time data synchronization
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <h3 class="feature-title">Architecture That Breathes</h3>
+                <p class="feature-description">
+                    We don't just create buildings we give them character. Every facade, every rooftop, every architectural 
+                    detail is captured with care, transforming structures into spaces with personality and history.
+                </p>
+                <div class="feature-highlight">
+                    <i class="fas fa-ruler-combined"></i>
+                    Millimeter-perfect precision
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-road"></i>
+                </div>
+                <h3 class="feature-title">Cities That Live and Move</h3>
+                <p class="feature-description">
+                    Create dynamic urban ecosystems where roads flow like rivers, bridges connect communities, and green spaces 
+                    breathe life into concrete landscapes. Build not just models, but living environments.
+                </p>
+                <div class="feature-highlight">
+                    <i class="fas fa-leaf"></i>
+                    Environmental consciousness
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="story" id="story">
+        <div class="story-container">
+            <div class="story-content">
+                <h2 class="story-title">Where Technology Meets Imagination</h2>
+                <p class="story-text">
+                    At ELMC 3D, we believe that every map tells a story waiting to be discovered. What began as a simple 
+                    conversion tool has evolved into a platform that brings geographic data to life, transforming 
+                    coordinates into experiences and pixels into possibilities.
+                </p>
+                <p class="story-text">
+                    Our journey started with a simple question: <strong>"What if we could walk through our maps?"</strong> 
+                    Today, we're answering that question for thousands of creators, planners, and dreamers around the world.
+                </p>
+                <div class="story-quote">
+                    "We're not just building software we're creating windows into worlds that exist only in imagination, 
+                    waiting for someone brave enough to open them."
+                </div>
+                <a href="/about" class="btn btn-primary" style="padding: 15px 35px;">
+                    <i class="fas fa-book-open"></i> Read Our Full Story
+                </a>
+            </div>
+<div class="story-image">
+    <div class="story-img">
+        <img src="https://preview.free3d.com/img/2020/04/2408251163469153863/xg5psd5c.jpg" 
+             alt="3D City Model - Where Dreams Take Shape" 
+             style="width: 100%; height: 100%; object-fit: cover;">
+    </div>
+</div>
+        </div>
+    </section>
+    <section class="gallery" id="gallery">
+        <div class="section-header">
+            <h2 class="section-title">Worlds We've Built Together</h2>
+            <p class="section-subtitle">
+                Explore creations from our community of visionaries. Each model tells a story, solves a problem, 
+                or imagines a better future.
+            </p>
+        </div>
+        <div class="gallery-grid">
+            <div class="gallery-item">
+                <div class="gallery-img">
+                    <img src="https://media.sketchfab.com/models/4004f79e38e64c008fe284d8337154b9/thumbnails/fd496c63e4de4277b058255ec547c52a/f9cc099454be47088a2ec0d0e0511e81.jpeg" 
+             alt="3D City Model - Future City 2040" 
+             style="width: 100%; height: 100%; object-fit: cover;">
+
+                </div>
+                <div class="gallery-content">
+                    <h3 class="gallery-title">
+                        <i class="fas fa-city"></i> Future City 2040
+                    </h3>
+                    <p class="gallery-description">
+                        A sustainable urban development project showing how cities can evolve with green spaces, 
+                        smart infrastructure, and community-focused design.
+                    </p>
+                </div>
+            </div>
+            <div class="gallery-item">
+                <div class="gallery-img">
+                   <img src="https://netrinoimages.s3.eu-west-2.amazonaws.com/2023/09/22/1566993/521154/ancient_temple_30_old_ruins_of_the_temple_3d_kitbash_asset_pack_3d_model_c4d_max_obj_fbx_ma_lwo_3ds_3dm_stl_5361993_m.jpg" 
+             alt="3D City Model - Lost District Reborn" 
+             style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div class="gallery-content">
+                    <h3 class="gallery-title">
+                        <i class="fas fa-landmark"></i> Lost District Reborn
+                    </h3>
+                    <p class="gallery-description">
+                        Digital reconstruction of a historic neighborhood, preserving architectural heritage while 
+                        planning sensitive modern integration.
+                    </p>
+                </div>
+            </div>
+            <div class="gallery-item">
+                <div class="gallery-img">
+                    <img src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/Mojave-River_thumbnail.png?itok=P8SZKGcz" 
+             alt="3D City Model - River Valley Restoration" 
+             style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div class="gallery-content">
+                    <h3 class="gallery-title">
+                        <i class="fas fa-tree"></i> River Valley Restoration
+                    </h3>
+                    <p class="gallery-description">
+                        Comprehensive environmental model showing river ecosystem restoration, flood prevention, 
+                        and sustainable community development.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="workflow">
+        <div class="section-header">
+            <h2 class="section-title">Your Creative Journey</h2>
+            <p class="section-subtitle">
+                From inspiration to realization a seamless process designed to amplify your creativity, 
+                not complicate it.
+            </p>
+        </div>
+        <div class="workflow-steps">
+            <div class="workflow-step">
+                <div class="step-icon">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <h3 class="step-title">Dream It</h3>
+                <p class="step-description">
+                    Every great creation begins with a vision. Explore possibilities, find inspiration, 
+                    and imagine what could be.
+                </p>
+                <div class="step-detail">
+                    <i class="fas fa-check-circle"></i> Unlimited exploration
+                </div>
+                <div class="step-detail">
+                    <i class="fas fa-compass"></i> Global location access
+                </div>
+            </div>
+            <div class="workflow-step">
+                <div class="step-icon">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <h3 class="step-title">Design It</h3>
+                <p class="step-description">
+                    Shape your vision with intuitive tools that understand what you're trying to create, 
+                    not just what you're clicking.
+                </p>
+                <div class="step-detail">
+                    <i class="fas fa-sliders-h"></i> Intelligent customization
+                </div>
+                <div class="step-detail">
+                    <i class="fas fa-palette"></i> Material & texture control
+                </div>
+            </div>
+            <div class="workflow-step">
+                <div class="step-icon">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <h3 class="step-title">Live It</h3>
+                <p class="step-description">
+                    Watch your creation come to life. Share it, explore it, and see your vision become 
+                    something you can experience.
+                </p>
+                <div class="step-detail">
+                    <i class="fas fa-vr-cardboard"></i> VR/AR compatible
+                </div>
+                <div class="step-detail">
+                    <i class="fas fa-share-alt"></i> Easy sharing & collaboration
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="testimonials">
+        <div class="section-header">
+            <h2 class="section-title">Voices From Our Community</h2>
+            <p class="section-subtitle">
+                Don't just take our word for it hear from the creators, planners, and visionaries 
+                who are reshaping our world.
+            </p>
+        </div>
+        <div class="testimonial-grid">
+            <div class="testimonial-card">
+                <p class="testimonial-text">
+                    ELMC 3D transformed how we present urban planning projects. What used to be flat, 
+                    technical drawings are now living environments that communities can actually experience 
+                    and connect with.
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">M</div>
+                    <div class="author-info">
+                        <h4>Maria Rodriguez</h4>
+                        <p>Urban Planner</p>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-text">
+                    As an architect, I've used many 3D tools, but none capture the soul of a place like ELMC 3D. 
+                    It understands that buildings aren't just structures they're experiences waiting to happen.
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">D</div>
+                    <div class="author-info">
+                        <h4>David Chen</h4>
+                        <p>Principal Architect</p>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-text">
+                    Teaching environmental planning became exponentially more engaging when students could 
+                    walk through their proposed solutions. ELMC 3D made abstract concepts tangible.
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">S</div>
+                    <div class="author-info">
+                        <h4>Sarah Johnson</h4>
+                        <p>Environmental Designer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="final-cta">
+        <div class="section-header" style="margin-bottom: 50px;">
+            <h2 class="cta-title">Ready to Build Your World?</h2>
+            <p class="cta-subtitle">
+                Join thousands of creators who are already shaping tomorrow's landscapes, 
+                preserving yesterday's heritage, and imagining possibilities beyond today.
+            </p>
+        </div>
+        
+        <div class="cta-stats">
+            <div class="stat-item">
+                <div class="stat-number">10,000+</div>
+                <div class="stat-label">Active Creators</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">150+</div>
+                <div class="stat-label">Countries Served</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">500k+</div>
+                <div class="stat-label">Models Created</div>
+            </div>
+        </div>
+        <a href="/home/" class="btn btn-primary" style="padding: 20px 50px; font-size: 1.2rem; position: relative; z-index: 2;">
+            <i class="fas fa-seedling"></i> Begin Your Creation Journey
+        </a>
+    </section>
+    <footer class="footer">
+        <div class="copyright">
+            <p>&copy; 2024 ELMC 3D. All rights reserved. Built with passion, powered by imagination.</p>
+            <p style="margin-top: 10px;">
+                <i class="fas fa-map-marked-alt" style="margin-right: 8px;"></i>
+                Crafted with OpenStreetMap and Three.js • Made for dreamers everywhere
+            </p>
+        </div>
+    </footer>
+    <script src="{% static 'js/intro.js' %}"></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js')
+                .then(function(registration) {
+                })
+                .catch(function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+        });
+    }
+</script>
+</body>
+</html>

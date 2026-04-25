@@ -1,0 +1,408 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Account</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='white' d='M239.1 6.3l-208 78c-18.7 7-31.1 25-31.1 45v225.1c0 18.2 10.3 34.8 26.5 42.9l208 104c13.5 6.8 29.4 6.8 42.9 0l208-104c16.3-8.1 26.5-24.8 26.5-42.9V129.3c0-20-12.4-37.9-31.1-44.9l-208-78C262 2.2 250 2.2 239.1 6.3zM256 68.4l192 72v1.1l-192 78-192-78v-1.1l192-72zm32 356V275.5l160-65v133.9l-160 80z'/></svg>" type="image/svg+xml">
+        <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
+<meta name="theme-color" content="#667eea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ELMC 3D">
+<link rel="apple-touch-icon" href="{% static 'pwa/icon-192x192.png' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/account.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container">
+        <div class="mobile-menu-btn" id="mobileMenuBtn">
+            <i class="fas fa-user-circle"></i>
+        </div>
+    </div>
+
+    <div class="mobile-sidebar-overlay" id="mobileSidebarOverlay"></div>
+    <div class="mobile-sidebar" id="mobileSidebar">
+        <div class="mobile-sidebar-header">
+            <div class="mobile-profile-section">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcStltpfa69E9JTQOf5ZcyLGR8meBbxMFJxM0w&s" alt="Profile" class="mobile-profile-picture" id="mobileProfilePicture"
+                     onclick="document.getElementById('profilePictureInput').click()">
+                <div class="mobile-profile-name" id="mobileProfileName">Loading...</div>
+                <div class="mobile-profile-email" id="mobileProfileEmail">loading...</div>
+            </div>
+        </div>
+        
+        <ul class="mobile-nav-menu">
+            <li class="mobile-nav-item">
+                <a href="#" class="mobile-nav-link active" onclick="showTab('models'); closeMobileMenu()">
+                    <i class="fas fa-cube"></i>Models
+                </a>
+            </li>
+            <li class="mobile-nav-item">
+                <a href="#" class="mobile-nav-link" onclick="showTab('favorites'); closeMobileMenu()">
+                    <i class="fas fa-heart"></i>Favorites
+                </a>
+            </li>
+            <li class="mobile-nav-item">
+                <a href="#" class="mobile-nav-link" onclick="showTab('settings'); closeMobileMenu()">
+                    <i class="fas fa-cog"></i>Account Settings
+                </a>
+            </li>
+            <li class="mobile-nav-item">
+                <a href="#" class="mobile-nav-link" onclick="showTab('delete'); closeMobileMenu()">
+                    <i class="fas fa-trash-alt"></i>Delete Account
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="account-content">
+        <div class="sidebar">
+            <div class="profile-section">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcStltpfa69E9JTQOf5ZcyLGR8meBbxMFJxM0w&s" alt="Profile" class="profile-picture" id="profilePicture" onclick="document.getElementById('profilePictureInput').click()">
+                <div class="profile-name" id="profileName">Loading...</div>
+                <div class="profile-email" id="profileEmail">loading...</div>
+                <input type="file" id="profilePictureInput" class="file-input" accept="image/*" onchange="uploadProfilePicture(this.files[0])">
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" onclick="showTab('models')">
+                        <i class="fas fa-cube"></i>Models
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showTab('favorites')">
+                        <i class="fas fa-heart"></i>Favorites
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showTab('settings')">
+                        <i class="fas fa-cog"></i>Account Settings
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showTab('delete')">
+                        <i class="fas fa-trash-alt"></i>Delete Account
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="message" id="message"></div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+            </div>
+
+            <div id="modelsTab" class="tab-content active">
+                <div class="tab-header">
+                    <h2>Models</h2>
+                    <p>All 3D models you have created</p>
+                </div>
+
+                <div class="models-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="modelSearch" placeholder="Search by name or description..." onkeyup="filterModels()">
+                        <button class="btn btn-secondary btn-small" style="padding-right:26px" onclick="clearSearch()" title="Clear search">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="sort-dropdown">
+                        <select id="modelSort" onchange="sortModels()" class="form-control">
+                            <option value="date_desc">Sort: Most recent</option>
+                            <option value="date_asc">Oldest</option>
+                            <option value="name_asc">Name (A-Z)</option>
+                            <option value="name_desc">Name (Z-A)</option>
+                            <option value="size_desc">Size (large-small)</option>
+                            <option value="size_asc">Size (small-large)</option>
+                            <option value="elements_desc">Elements (many-few)</option>
+                            <option value="elements_asc">Elements (few-many)</option>
+                            <option value="visibility">Visibility (Public-Private)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="search-stats" id="searchStats" style="display: none;">
+                    <span>Results found: <span id="resultsCount" class="badge">0</span></span>
+                    <span id="searchQueryDisplay"></span>
+                </div>
+
+                <div class="models-container">
+                    <div>
+                        <div class="models-grid" id="modelsGrid">
+                        </div>
+
+                        <div class="placeholder" id="modelsPlaceholder">
+                            <i class="fas fa-cube"></i>
+                            <h3>You don't have any models yet</h3>
+                            <p>Your models will appear here after you create them</p>
+                        </div>
+
+                        <div class="search-empty" id="searchEmpty" style="display: none;">
+                            <i class="fas fa-search"></i>
+                            <h3>No results found</h3>
+                            <p>Try with other search terms</p>
+                            <button class="btn btn-primary" onclick="clearSearch()">
+                                <i class="fas fa-times"></i> Clear search
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-panel">
+                        <h3>Statistics</h3>
+                        <div class="stats-grid" id="statsGrid">
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalModels">0</div>
+                                <div class="stat-label">Total Models</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="publicModels">0</div>
+                                <div class="stat-label">Public Models</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="privateModels">0</div>
+                                <div class="stat-label">Private Models</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="storageUsed">0 MB</div>
+                                <div class="stat-label">Space Used</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="modelsThisMonth">0</div>
+                                <div class="stat-label">Models This Month</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalElements">0</div>
+                                <div class="stat-label">Total Elements</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalBuildings">0</div>
+                                <div class="stat-label">Total Buildings</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalHighways">0</div>
+                                <div class="stat-label">Total Roads</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalWater">0</div>
+                                <div class="stat-label">Total Water</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalNatural">0</div>
+                                <div class="stat-label">Total Natural</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalLanduse">0</div>
+                                <div class="stat-label">Total Landuse</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalOther">0</div>
+                                <div class="stat-label">Total Other</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="favoritesTab" class="tab-content">
+                <div class="tab-header">
+                    <h2>Favorite Models</h2>
+                    <p>Your favorite models from the platform</p>
+                </div>
+
+                <div class="models-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="favoriteSearch" placeholder="Search favorite models..." onkeyup="filterFavoriteModels()">
+                        <button class="btn btn-secondary btn-small" onclick="clearFavoriteSearch()" title="Clear search">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="sort-dropdown">
+                        <select id="favoriteSort" onchange="sortFavoriteModels()" class="form-control">
+                            <option value="date_desc">Sort: Most recent</option>
+                            <option value="date_asc">Oldest</option>
+                            <option value="name_asc">Name (A-Z)</option>
+                            <option value="name_desc">Name (Z-A)</option>
+                            <option value="views_desc">Views (many-few)</option>
+                            <option value="views_asc">Views (few-many)</option>
+                            <option value="favorites_desc">Favorites (many-few)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="search-stats" id="favoriteSearchStats" style="display: none;">
+                    <span>Favorite models found: <span id="favoriteResultsCount" class="badge">0</span></span>
+                    <span id="favoriteQueryDisplay"></span>
+                </div>
+
+                <div class="models-container">
+                    <div>
+                        <div class="models-grid" id="favoritesGrid">
+                        </div>
+
+                        <div class="placeholder" id="favoritesPlaceholder">
+                            <i class="fas fa-heart"></i>
+                            <h3>You don't have any favorite models</h3>
+                            <p>Your favorite models will appear here</p>
+                            <a href="/workshop/" class="btn btn-primary" style="margin-top: 15px;">
+                                <i class="fas fa-cube"></i> Explore Workshop
+                            </a>
+                        </div>
+
+                        <div class="search-empty" id="favoriteSearchEmpty" style="display: none;">
+                            <i class="fas fa-search"></i>
+                            <h3>No favorite models found</h3>
+                            <p>Try with other search terms</p>
+                            <button class="btn btn-primary" onclick="clearFavoriteSearch()">
+                                <i class="fas fa-times"></i> Clear search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settingsTab" class="tab-content">
+                <div class="tab-header">
+                    <h2>Account Settings</h2>
+                    <p>Manage your personal information and account settings</p>
+                </div>
+
+                <form id="profileForm">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email address</label>
+                        <input type="email" id="email" class="form-control" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </form>
+
+                <div style="margin-top: 40px; padding-top: 30px;">
+                    <h3 style="margin-bottom: 20px; color: #f1f5f9;">Change password</h3>
+                    <form id="passwordForm">
+                        <div class="form-group">
+                            <label for="currentPassword">Current password</label>
+                            <input type="password" id="currentPassword" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="newPassword">New password</label>
+                            <input type="password" id="newPassword" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm new password</label>
+                            <input type="password" id="confirmPassword" class="form-control" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Change password</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="deleteTab" class="tab-content">
+                <div class="tab-header">
+                    <h2>Delete Account</h2>
+                    <p>Account deletion is permanent and irreversible</p>
+                </div>
+
+                <div class="danger-zone">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Danger Zone</h3>
+                    <p>Once you delete your account, all your data will be permanently deleted. This action cannot be undone.</p>
+                    <p>Before continuing, make sure you have downloaded all your models and important data.</p>
+                    
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label for="confirmDelete">Enter password to confirm account deletion:</label>
+                        <input type="password" id="confirmDelete" class="form-control" placeholder="Enter your password">
+                    </div>
+                    
+                    <button type="button" class="btn btn-danger" onclick="deleteAccount()">Delete Account Permanently</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="viewerModal" style="display: none;">
+        <div class="modal-content" style="max-width: 90%; height: 90vh;">
+            <div class="modal-header">
+                <h2 id="viewerTitle">3D View</h2>
+                <button class="close-modal" onclick="closeViewer()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 0; height: calc(100% - 60px);">
+                <div id="viewerContainer" style="width: 100%; height: 100%; position: relative;">
+                    <canvas id="modelCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+                    
+                    <div style="position: absolute; top: 20px; right: 20px; z-index: 1000;">
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <button onclick="resetCamera()" style="background: rgba(30, 41, 59, 0.8); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-sync-alt"></i> Reset Camera
+                            </button>
+                            <button onclick="toggleAutoRotate()" id="autoRotateBtn" style="background: rgba(30, 41, 59, 0.8); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-rotate"></i> Auto Rotate
+                            </button>
+                            <button onclick="toggleWireframe()" id="wireframeToggleBtn" style="background: rgba(30, 41, 59, 0.8); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-code"></i> Wireframe: OFF
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="viewerLoading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 23, 42, 0.9); padding: 20px 40px; border-radius: 10px; display: none; z-index: 1000;">
+                        <div class="spinner" style="width: 40px; height: 40px; margin: 0 auto 15px;"></div>
+                        <p style="color: white; text-align: center;">Loading model...</p>
+                    </div>
+                    
+                    <div id="modelInfoPanel" style="position: absolute; bottom: 47px; left: 7px; background: rgba(15, 23, 42, 0.95); padding: 15px; border-radius: 8px; max-width: 350px; min-width: 100px; display: none; z-index: 1000; border: 1px solid #334155; backdrop-filter: blur(10px); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);">
+                        <button onclick="toggleInfoPanel()" id="toggleInfoBtn" style="position: absolute; top: 10px; right: 10px; background: none; color: #94a3b8; border: none; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: color 0.2s;" title="Hide information">
+                            <i class="fas fa-times"></i> 
+                        </button>
+                        
+                        <h4 style="color: #f1f5f9; margin-bottom: 10px; font-size: 16px; border-bottom: 1px solid #334155; padding-bottom: 8px;">Model Information</h4>
+                        <div style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">
+                            <div><strong>Name:</strong> <span id="infoName">-</span></div>
+                            <div><strong>Elements:</strong> <span id="infoElements">0</span></div>
+                            <div><strong>Buildings:</strong> <span id="infoBuildings">0</span></div>
+                            <div><strong>Size:</strong> <span id="infoSize">0 MB</span></div>
+                            <div><strong>Description:</strong></div>
+                            <div id="infoDescription" style="margin-top: 5px; max-height: 100px; overflow-y: auto; font-size: 13px; line-height: 1.4; color: #cbd5e1;">
+                                -
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="showInfoPanel()" id="showInfoBtn" style="position: absolute; bottom: 47px; left: 7px; background: rgba(102, 126, 234, 0.9); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: none; align-items: center; gap: 8px; z-index: 1000; box-shadow: 0 3px 10px rgba(0,0,0,0.2); transition: all 0.3s;" title="Show model information">
+                        <i class="fas fa-info-circle"></i> Show Info
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+            })
+            .catch(function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+    });
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+<script src="{% static 'js/account.js' %}"></script>
+</body>
+</html>

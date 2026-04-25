@@ -1,0 +1,168 @@
+{% load static %}
+<!doctype html>
+<html lang="ro">
+<head>
+  {% load static %}
+  <meta charset="utf-8" />
+  <title>ELMC 3D</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='white' d='M239.1 6.3l-208 78c-18.7 7-31.1 25-31.1 45v225.1c0 18.2 10.3 34.8 26.5 42.9l208 104c13.5 6.8 29.4 6.8 42.9 0l208-104c16.3-8.1 26.5-24.8 26.5-42.9V129.3c0-20-12.4-37.9-31.1-44.9l-208-78C262 2.2 250 2.2 239.1 6.3zM256 68.4l192 72v1.1l-192 78-192-78v-1.1l192-72zm32 356V275.5l160-65v133.9l-160 80z'/></svg>" type="image/svg+xml">
+      <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
+<meta name="theme-color" content="#667eea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ELMC 3D">
+<link rel="apple-touch-icon" href="{% static 'pwa/icon-192x192.png' %}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+  <link rel="stylesheet" href="{% static 'css/home.css' %}">
+</head>
+<body>
+  <header class="header">
+    {% include 'navbar.html' %}
+  </header>
+
+<main class="main">
+    <div class="container">
+      <div class="left-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-sliders-h"></i> Settings</h3>
+          <button class="close-panel-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="panel-content">
+          <div class="panel-section">
+            <h3><i class="fas fa-layer-group"></i> OSM Data Types</h3>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input type="checkbox" id="building-checkbox" value="building" checked>
+                <label for="building-checkbox"><i class="fas fa-building"></i> Buildings</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="highway-checkbox" value="highway">
+                <label for="highway-checkbox"><i class="fas fa-road"></i> Roads</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="water-checkbox" value="water">
+                <label for="water-checkbox"><i class="fas fa-water"></i> Water</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="natural-checkbox" value="natural">
+                <label for="natural-checkbox"><i class="fas fa-tree"></i> Natural elements</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="landuse-checkbox" value="landuse">
+                <label for="landuse-checkbox"><i class="fas fa-mountain"></i> Land use</label>
+              </div>
+            </div>
+          </div>
+          <div class="panel-section">
+            <h3><i class="fas fa-mouse-pointer"></i> Selection Tools</h3>
+            <div class="tool-buttons">
+              <button id="draw-rectangle" class="tool-btn active">
+                <i class="fas fa-vector-square"></i> Rectangle Selection
+              </button>
+              <button id="clear-selection" class="tool-btn">
+                <i class="fas fa-trash-alt"></i> Clear Selection
+              </button>
+            </div>
+            <div class="selection-info-left">
+              <span class="selection-counter" id="selection-counter">
+                 0 areas selected
+              </span>
+            </div>
+          </div>
+          <div class="panel-section">
+            <h3><i class="fas fa-info-circle"></i> Instructions</h3>
+            <div class="instructions-list">
+              <p>Left click to navigate the map</p>
+              <p>Right click + drag to select an area</p>
+              <p>Only one area can be selected</p>
+              <p>Clear current area to select another</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="map-container-main">
+                <div class="map-search-container map-search-top-left">
+            <div class="map-search-box">
+                <input type="text" 
+                       id="mapSearchInput" 
+                       class="map-search-input" 
+                       placeholder="Search location...">
+                <button id="mapSearchBtn" class="map-search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div id="mapSearchResults" class="map-search-results"></div>
+        </div>
+        <div id="map"></div>
+<div class="map-header-info">
+    <div class="map-header-item">
+        <span>Selected areas:</span>
+        <span id="selected-count">0</span>
+    </div>
+    <div class="map-header-item">
+        <span>Total area:</span>
+        <span id="selected-area">-</span>
+    </div>
+    <div class="map-header-item">
+        <span>Data types:</span>
+        <span id="data-type">Buildings</span>
+    </div>
+    <div class="generate-container">
+            <button id="generateBtn" class="generate-btn" disabled>
+              <i class="fas fa-cube"></i> Generate 3D model
+            </button>
+            <button id="mobile-menu-toggle" class="mobile-menu-btn">
+              <i class="fas fa-sliders-h"></i>
+            </button>
+          </div>
+      </div>
+    </div>
+    <div id="areaWarningModal" class="modal-warning" style="display: none;">
+    <div class="warning-content">
+        <h3><i class="fas fa-exclamation-triangle"></i> Warning: Area too large</h3>
+        <p>You have selected an area of<span id="warningAreaSize">0</span> km².</p>
+        <p>The selected area is too large for optimal processing. This may cause:</p>
+        <ul>
+            <li>Long data loading times</li>
+            <li>Slow 3D model generation</li>
+            <li>Possible processing errors</li>
+            <li>High resource consumption</li>
+        </ul>
+        <p>We recommend selecting a smaller area for optimal results.</p>
+        <div class="warning-actions">
+            <button id="confirmProceed" class="btn-warning btn-warning-secondary">
+                <i class="fas fa-check"></i> Continue anyway
+            </button>
+            <button id="cancelProceed" class="btn-warning btn-warning-primary">
+                <i class="fas fa-times"></i> Cancel selection
+            </button>
+        </div>
+    </div>
+</div>
+  </main>
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+            })
+            .catch(function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+    });
+}
+</script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+  <script src="{% static 'js/home.js' %}"></script>
+</body>
+</html>

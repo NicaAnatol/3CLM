@@ -1,0 +1,131 @@
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+*.egg
+dist/
+build/
+eggs/
+.eggs/
+*.mo
+*.pot
+
+# ============================================
+# Django
+# ============================================
+db.sqlite3
+db.sqlite3-journal
+*.log
+*.pot
+*.pyc
+local_settings.py
+migrations/
+!*/migrations/__init__.py
+media/
+staticfiles/
+static/
+*.pid
+
+# ============================================
+# Environment variables (SENSITIVE DATA!)
+# ============================================
+.env
+.env.local
+.env.production
+.env.development
+*.env
+!.env.example
+
+# ============================================
+# Secrets and keys
+# ============================================
+*.key
+*.pem
+*.crt
+secret.key
+SECRET_KEY
+*.secret
+
+# ============================================
+# IDE and Editor files
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-*
+.project
+.pydevproject
+.settings/
+*.code-workspace
+
+# ============================================
+# Testing
+# ============================================
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+*.cover
+nose2-runner.xml
+
+# ============================================
+# Project specific
+# ============================================
+debug.log
+media/exports/
+media/thumbnails/
+media/models/
+media/projects/
+media/users/
+media/cad_files/
+thumbnails/
+*.glb
+*.json
+*.zip
+logs/
+*.tmp
+temp/
+
+# ============================================
+# MongoDB local
+# ============================================
+dump/
+mongodb/
+*.bson
+
+# ============================================
+# OS generated files
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.bak
+desktop.ini
+
+# ============================================
+# Package management
+# ============================================
+pip-log.txt
+pip-delete-this-directory.txt
+pip-selfcheck.json

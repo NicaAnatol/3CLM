@@ -1,0 +1,664 @@
+{% load static %}
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <title>View Model 3D</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='white' d='M239.1 6.3l-208 78c-18.7 7-31.1 25-31.1 45v225.1c0 18.2 10.3 34.8 26.5 42.9l208 104c13.5 6.8 29.4 6.8 42.9 0l208-104c16.3-8.1 26.5-24.8 26.5-42.9V129.3c0-20-12.4-37.9-31.1-44.9l-208-78C262 2.2 250 2.2 239.1 6.3zM256 68.4l192 72v1.1l-192 78-192-78v-1.1l192-72zm32 356V275.5l160-65v133.9l-160 80z'/></svg>" type="image/svg+xml">
+     <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
+<meta name="theme-color" content="#667eea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ELMC 3D">
+<link rel="apple-touch-icon" href="{% static 'pwa/icon-192x192.png' %}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+  <link rel="stylesheet" href="{% static 'css/view_3d.css' %}">
+</head>
+<body>
+
+
+  <header class="header">
+    {% include 'navbar.html' %}
+  </header>
+
+
+<div class="sub-menu">
+  <button class="sub-menu-btn active" data-section="edit">
+    <i class="fas fa-edit"></i> Edit
+  </button>
+  <button class="sub-menu-btn" data-section="textures">
+    <i class="fas fa-image"></i> Textures
+  </button>
+    <button class="sub-menu-btn" data-section="create">
+    <i class="fas fa-plus-circle"></i> Create
+  </button>
+  <button class="sub-menu-btn" data-section="view">
+    <i class="fas fa-eye"></i> View
+  </button>
+  <button class="sub-menu-btn" data-section="elements">
+    <i class="fas fa-layer-group"></i> Elements
+  </button>
+  <button class="sub-menu-btn" data-section="lighting">
+    <i class="fas fa-lightbulb"></i> Lighting
+  </button>
+  <button class="sub-menu-btn" data-section="export">
+    <i class="fas fa-download"></i> Export
+  </button>
+</div>
+  <main class="main-content">
+    <div class="container">
+      <div class="left-panel">
+          <div class="panel-header">
+    <h3><i class="fas fa-sliders-h"></i> <span id="mobile-panel-title">Edit</span></h3>
+    <button class="close-panel-btn">
+      <i class="fas fa-times"></i>
+    </button>
+    </div>
+        <div class="panel-content">
+          <div id="edit-section" class="panel-section">
+            <h3><i class="fas fa-edit"></i> Element Editing</h3>
+            
+            <div class="control-group">
+              <label>Element Type:</label>
+              <select id="elementTypeSelect" class="control-select">
+                <option value="none">None</option>
+                <option value="all">All</option>
+                <option value="building">Buildings</option>
+                <option value="highway">Roads</option>
+                <option value="water">Waters</option>
+                <option value="natural">Natural</option>
+                <option value="landuse">Land</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div class="button-group">
+              <button id="selectAllType" class="control-btn success">
+                <i class="fas fa-check-square"></i> Select all
+              </button>
+              <button id="deselectAll" class="control-btn">
+                <i class="fas fa-times-circle"></i> Deselect
+              </button>
+            </div>
+
+            <div class="control-group">
+              <label>Height:</label>
+              <input type="number" id="elementHeight" class="control-input" placeholder="Enter height" step="0.1" min="0.1" value="10">
+              <button id="changeHeight" class="control-btn" style="margin-top: 10px;">
+                <i class="fas fa-arrows-alt-v"></i> Change height
+              </button>
+            </div>
+
+            <div class="control-group">
+              <label>Scaling (Width):</label>
+              <input type="number" id="elementWidth" class="control-input" placeholder="Enter scaling factor" step="0.1" min="0.1" value="1">
+              <button id="changeWidth" class="control-btn" style="margin-top: 10px;">
+                <i class="fas fa-arrows-alt-h"></i> Change scaling
+              </button>
+            </div>
+
+            <div class="control-group">
+              <label>Color:</label>
+              <input type="color" id="elementColor" class="control-input" value="#cccccc" style="height: 40px; padding: 5px;">
+              <button id="changeColor" class="control-btn" style="margin-top: 10px;">
+                <i class="fas fa-palette"></i> Change color
+              </button>
+            </div>
+
+            <div class="control-group">
+              <label>Transform Controls:</label>
+              <div class="button-group horizontal">
+                <button id="transformTranslate" class="control-btn">
+                  <i class="fas fa-arrows-alt"></i> Translate
+                </button>
+                <button id="transformRotate" class="control-btn">
+                  <i class="fas fa-sync-alt"></i> Rotate
+                </button>
+                <button id="transformScale" class="control-btn">
+                  <i class="fas fa-expand-alt"></i> Scale
+                </button>
+              </div>
+              <div class="button-group horizontal" style="margin-top: 8px;">
+                <button id="resetTransform" class="control-btn">
+                  <i class="fas fa-redo"></i> Reset
+                </button>
+                <button id="detachTransform" class="control-btn">
+                  <i class="fas fa-times"></i> Deactivate
+                </button>
+              </div>
+              <div id="transformModeDisplay" style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 10px;">
+                Mode: Inactive
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label>Manual Position:</label>
+              <div class="position-grid">
+                <div>
+                  <input type="number" id="positionX" class="position-input" step="1" value="0" placeholder="X">
+                </div>
+                <div>
+                  <input type="number" id="positionY" class="position-input" step="1" value="0" placeholder="Y">
+                </div>
+                <div>
+                  <input type="number" id="positionZ" class="position-input" step="1" value="0" placeholder="Z">
+                </div>
+              </div>
+              <button id="setPosition" class="control-btn">
+                <i class="fas fa-map-marker-alt"></i> Set Position
+              </button>
+            </div>
+              <div class="control-group">
+              <label>Quick Actions:</label>
+              <div class="control-group">
+              <label>Selection Mode:</label>
+              <div class="button-group horizontal">
+                <button id="multiSelectToggle" class="control-btn" title="Toggle Multi-Select Mode">
+                  <i class="fas fa-mouse-pointer"></i> Single Select
+                </button>
+              </div>
+              <div class="help-text" style="margin-top: 8px; font-size: 12px; color: #94a3b8;">
+                <i class="fas fa-info-circle"></i> 
+                <span id="multiSelectStatus">Click selects single element</span>
+              </div>
+            </div>
+              <div class="button-group horizontal">
+                <button id="undoBtn" class="control-btn" title="Undo (Ctrl+Z)">
+                  <i class="fas fa-undo"></i> Undo
+                </button>
+                <button id="redoBtn" class="control-btn" title="Redo (Ctrl+Y)">
+                  <i class="fas fa-redo"></i> Redo
+                </button>
+              </div>
+              <div class="button-group horizontal" style="margin-top: 8px;">
+                <button id="copyBtn" class="control-btn" title="Copy (Ctrl+C)">
+                  <i class="fas fa-copy"></i> Copy
+                </button>
+                <button id="pasteBtn" class="control-btn" title="Paste (Ctrl+V)">
+                  <i class="fas fa-paste"></i> Paste
+                </button>
+                <button id="duplicateBtn" class="control-btn" title="Duplicate (Ctrl+D)">
+                  <i class="fas fa-clone"></i> Duplicate
+                </button>
+              </div>
+              <div class="button-group horizontal" style="margin-top: 8px;">
+                <button id="mergeBtn" class="control-btn" title="Merge (Ctrl+U)">
+                  <i class="fas fa-object-group"></i> Merge
+                </button>
+                <button id="separateBtn" class="control-btn" title="Separate (Ctrl+Shift+U)">
+                  <i class="fas fa-object-ungroup"></i> Separate
+                </button>
+                <button id="deleteBtn" class="control-btn" title="Delete (Delete/Backspace)">
+                  <i class="fas fa-trash"></i> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+
+
+
+          <div id="textures-section" class="panel-section" style="display: none;">
+            <h3><i class="fas fa-image"></i> Textures</h3>
+            
+            <div class="control-group">
+              <label>Texture face:</label>
+              <select id="textureFace" class="control-select">
+                <option value="all">All faces</option>
+                <option value="top">Top/Bottom</option>
+                <option value="aside">Side</option>
+              </select>
+            </div>
+
+            <div class="button-group">
+              <button id="applyTexture" class="control-btn success">
+                <i class="fas fa-check"></i> Apply texture
+              </button>
+              <button id="resetChanges" class="control-btn">
+                <i class="fas fa-undo"></i> Reset
+              </button>
+              <button id="reloadTextures" class="control-btn">
+                <i class="fas fa-sync"></i> Reload
+              </button>
+            </div>
+
+            <div class="control-group">
+              <label>Available Textures:</label>
+              <div class="texture-list" id="textureList">
+                <div style="padding: 20px; text-align: center; color: #94a3b8;">
+                  <i class="fas fa-spinner fa-spin"></i> Loading textures...
+                </div>
+              </div>
+            </div>
+          </div>
+<div id="create-section" class="panel-section" style="display: none;">
+  <h3><i class="fas fa-plus-circle"></i> Create Element</h3>
+  <div class="import-section">
+    <div class="import-header">
+      <i class="fas fa-file-import"></i> Import 3D Model
+    </div>
+    <button id="importExternalModelBtn" class="control-btn import-btn">
+      <i class="fas fa-file-import"></i> Select 3D File
+    </button>
+    <div class="import-info">
+      <strong>Supported formats:</strong> .gltf, .glb, .obj, .fbx, .3mf, .stl<br>
+      <strong>Instructions:</strong> Select a 3D file to add directly to the scene
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Element Type:</label>
+    <select id="newElementType" class="control-select">
+      <option value="building">Building</option>
+      <option value="highway">Road</option>
+      <option value="water">Water</option>
+      <option value="natural">Natural</option>
+      <option value="landuse">Land</option>
+      <option value="other">Other type</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label>Geometric Shape:</label>
+    <select id="elementShape" class="control-select">
+      <option value="cube">Cube</option>
+      <option value="sphere">Sphere</option>
+      <option value="cylinder">Cylinder</option>
+      <option value="cone">Cone</option>
+      <option value="pyramid">Pyramid</option>
+      <option value="torus">Torus</option>
+      <option value="plane">Plane</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label>Custom Color:</label>
+    <div class="color-picker-grid">
+      <input type="color" id="newElementColor" value="#ffffff">
+      <button id="confirmColorBtn" class="control-btn confirm-color-btn"><i class="fas fa-palette"></i>
+        Apply
+      </button>
+    </div>
+    <div class="color-info">
+      <div>
+        Current color: 
+        <span id="currentColorHex" class="color-hex">#ffffff</span>
+      </div>
+      <div id="colorPreview" class="color-preview"></div>
+    </div>
+  </div>
+  
+  <div class="dimensions-grid">
+    <div class="dimension-group">
+      <label>Height:</label>
+      <input type="number" id="newElementHeight" value="10" min="0.1" step="0.1" class="control-input">
+    </div>
+    
+    <div class="dimension-group">
+      <label>Radius/Width:</label>
+      <input type="number" id="newElementWidth" value="5" min="0.1" step="0.1" class="control-input">
+    </div>
+  </div>
+
+  <div class="dimensions-grid">
+    <div class="dimension-group">
+      <label>Depth:</label>
+      <input type="number" id="newElementDepth" value="5" min="0.1" step="0.1" class="control-input">
+    </div>
+    
+    <div class="dimension-group">
+      <label>Rotation (°):</label>
+      <input type="number" id="elementRotation" value="0" min="0" max="360" step="1" class="control-input">
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Rotation Control:</label>
+    <div class="rotation-controls">
+      <button id="rotateLeftBtn" class="control-btn rotation-btn">
+        ↶ -15°
+      </button>
+      <button id="resetRotationBtn" class="control-btn rotation-btn">
+        Reset
+      </button>
+      <button id="rotateRightBtn" class="control-btn rotation-btn">
+        ↷ +15°
+      </button>
+    </div>
+  </div>
+  
+  <div class="creation-buttons">
+    <button id="startCreationBtn" class="control-btn start-creation-btn">
+      <i class="fas fa-play"></i> Start Creation
+    </button>
+    <button id="cancelCreationBtn" class="control-btn cancel-creation-btn">
+      <i class="fas fa-times"></i> Cancel
+    </button>
+  </div>
+  
+  <div id="creationStatus" class="creation-status">
+    <div class="status-content">
+      <strong>Creation status:</strong> <span id="statusText">Inactive</span>
+    </div>
+  </div>
+</div>
+    <div id="view-section" class="panel-section" style="display: none;">
+    <h3><i class="fas fa-eye"></i> View Controls</h3>
+    
+<div class="button-group">
+        <button id="resetView" class="control-btn">
+            <i class="fas fa-crosshairs"></i> Reset View
+        </button>
+        <button id="toggleGrid" class="control-btn">
+            <i class="fas fa-th"></i> Toggle Grid
+        </button>
+        <button id="toggleAxes" class="control-btn">
+            <i class="fas fa-arrows-alt"></i> Toggle Axes
+        </button>
+    </div>
+
+    <div class="control-group">
+        <label>CAMERA MOVEMENT:</label>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.5; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+            <div><strong>W:</strong> Move forward</div>
+            <div><strong>S:</strong> Move backward</div>
+            <div><strong>A:</strong> Move left</div>
+            <div><strong>D:</strong> Move right</div>
+            <div><strong>Q:</strong> Move up</div>
+            <div><strong>E:</strong> Move down</div>
+            <div><strong>Shift:</strong> Fast movement</div>
+            <div><strong>R:</strong> Reset camera</div>
+            <div><strong>Ctrl+F:</strong> Center on buildings</div>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label>MOUSE CONTROLS:</label>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.5; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+            <div><strong>Left Click+Drag:</strong> Rotate camera</div>
+            <div><strong>Right Click+Drag:</strong> Pan camera</div>
+            <div><strong>Mouse Wheel:</strong> Zoom in/out</div>
+            <div><strong>Right Click:</strong> Deselect all</div>
+            <div><strong>Ctrl+Click:</strong> Multi-select elements</div>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label>SELECTION SHORTCUTS:</label>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.5; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+            <div><strong>M:</strong> Toggle multi-select mode</div>
+            <div><strong>Ctrl+A:</strong> Select all elements</div>
+            <div><strong>Ctrl+E:</strong> Deselect all elements</div>
+            <div><strong>1:</strong> Select all buildings</div>
+            <div><strong>2:</strong> Select all roads</div>
+            <div><strong>3:</strong> Select all water</div>
+            <div><strong>4:</strong> Select all natural</div>
+            <div><strong>5:</strong> Select all landuse</div>
+            <div><strong>6:</strong> Select all other</div>
+            <div><strong>Esc:</strong> Clear selection</div>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label>EDITING SHORTCUTS:</label>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.5; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+            <div><strong>Ctrl+C:</strong> Copy element</div>
+            <div><strong>Ctrl+V:</strong> Paste element</div>
+            <div><strong>Ctrl+D:</strong> Duplicate element</div>
+            <div><strong>Ctrl+U:</strong> Merge selected elements</div>
+            <div><strong>Ctrl+Shift+U:</strong> Separate merged elements</div>
+            <div><strong>Delete / Backspace:</strong> Delete element</div>
+            <div><strong>Tab:</strong> Toggle transform controls</div>
+            <div><strong>Ctrl+T:</strong> Cycle transform modes</div>
+            <div><strong>Ctrl+R:</strong> Reset selected elements</div>
+            <div><strong>Ctrl+K / Alt+C:</strong> Apply selected color</div>
+            <div><strong>Ctrl+X / Alt+T:</strong> Apply selected texture</div>
+            <div><strong>Ctrl+W / Alt+W:</strong> Change width of selected</div>
+            <div><strong>Ctrl+H / Alt+H:</strong> Change height of selected</div>
+            <div><strong>Ctrl+B / Alt+R:</strong> Reset properties of selected</div>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label>PROPERTIES SHORTCUTS:</label>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.5; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+            <div><strong>Ctrl+Shift+K:</strong> Open color picker</div>
+            <div><strong>Ctrl+Shift+X:</strong> Open texture panel</div>
+            <div><strong>Ctrl+Shift+W:</strong> Open width dialog</div>
+            <div><strong>Ctrl+Shift+H:</strong> Open height dialog</div>
+            <div><strong>[ / ]:</strong> Decrease/Increase width by 1</div>
+            <div><strong>- / +:</strong> Decrease/Increase height by 1</div>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label>VIEW & DISPLAY:</label>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.5; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+            <div><strong>Space:</strong> Toggle grid</div>
+            <div><strong>Ctrl+O:</strong> Reset camera view</div>
+            <div><strong>Ctrl+P:</strong> Take screenshot</div>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label>FILE OPERATIONS:</label>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.5; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+            <div><strong>Ctrl+S:</strong> Save project</div>
+            <div><strong>Ctrl+Shift+S:</strong> Export to server</div>
+            <div><strong>Ctrl+G:</strong> Export GLB</div>
+            <div><strong>Ctrl+I:</strong> Import 3D model</div>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label>TOOLS & UTILITIES:</label>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.5; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+            <div><strong>Ctrl+H:</strong> Repair morph targets</div>
+            <div><strong>F2:</strong> Reload textures</div>
+            <div><strong>F5:</strong> Remove duplicates</div>
+            <div><strong>Ctrl+Shift+C:</strong> Clear all elements</div>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label>UNDO/REDO HISTORY:</label>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.5; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+            <div><strong>Ctrl+Z:</strong> Undo</div>
+            <div><strong>Ctrl+Y:</strong> Redo</div>
+            <div><strong>Ctrl+Shift+Z:</strong> Redo</div>
+            <div><strong>Ctrl+Shift+Z (press twice):</strong> Clear history</div>
+        </div>
+    </div>
+</div>
+
+<div id="elements-section" class="panel-section" style="display: none;">
+  <h3><i class="fas fa-layer-group"></i> Element Types</h3>
+  <div class="checkbox-group">
+    <div class="checkbox-item">
+      <input type="checkbox" id="showBuildings" class="checkbox" checked>
+      <div class="custom-checkbox"></div>
+      <label for="showBuildings" class="checkbox-label">
+        <i class="fas fa-building"></i> Buildings
+      </label>
+    </div>
+    <div class="checkbox-item">
+      <input type="checkbox" id="showRoads" class="checkbox" checked>
+      <div class="custom-checkbox"></div>
+      <label for="showRoads" class="checkbox-label">
+        <i class="fas fa-road"></i> Roads
+      </label>
+    </div>
+    <div class="checkbox-item">
+      <input type="checkbox" id="showWater" class="checkbox" checked>
+      <div class="custom-checkbox"></div>
+      <label for="showWater" class="checkbox-label">
+        <i class="fas fa-water"></i> Waters
+      </label>
+    </div>
+    <div class="checkbox-item">
+      <input type="checkbox" id="showNatural" class="checkbox" checked>
+      <div class="custom-checkbox"></div>
+      <label for="showNatural" class="checkbox-label">
+        <i class="fas fa-tree"></i> Natural Elements
+      </label>
+    </div>
+    <div class="checkbox-item">
+      <input type="checkbox" id="showLanduse" class="checkbox" checked>
+      <div class="custom-checkbox"></div>
+      <label for="showLanduse" class="checkbox-label">
+        <i class="fas fa-mountain"></i> Land Use
+      </label>
+    </div>
+    <div class="checkbox-item">
+      <input type="checkbox" id="showOther" class="checkbox" checked>
+      <div class="custom-checkbox"></div>
+      <label for="showOther" class="checkbox-label">
+        <i class="fas fa-shapes"></i> Other Elements
+      </label>
+    </div>
+  </div>
+</div>
+
+          <div id="lighting-section" class="panel-section" style="display: none;">
+            <h3><i class="fas fa-lightbulb"></i> Lighting</h3>
+            
+            <div class="control-group">
+              <label>Light Intensity:</label>
+              <div style="display: flex; align-items: center; gap: 15px;">
+                <input type="range" id="lightIntensity" style="flex: 1;" min="0" max="2" step="0.1" value="1">
+                <span id="lightValue" style="min-width: 40px; text-align: right; color: #cbd5e1;">1.0</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="export-section" class="panel-section" style="display: none;">
+            <h3><i class="fas fa-download"></i> Export</h3>
+            
+            <div class="button-group">
+              <button id="exportGLB" class="control-btn export">
+                <i class="fas fa-file-export"></i> Download GLB
+              </button>
+                  <button id="saveProject" class="control-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <i class="fas fa-save"></i> Save Project
+    </button>
+              <button id="screenshot" class="control-btn">
+                <i class="fas fa-camera"></i> Capture Image
+              </button>
+            </div>
+
+            <div class="stats-grid" style="margin-top: 20px;">
+              <div class="stat-item">
+                <div class="stat-value" id="buildingCount">0</div>
+                <div class="stat-label">Buildings</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="roadCount">0</div>
+                <div class="stat-label">Roads</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="waterCount">0</div>
+                <div class="stat-label">Waters</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="naturalCount">0</div>
+                <div class="stat-label">Natural</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="landuseCount">0</div>
+                <div class="stat-label">Land</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="otherCount">0</div>
+                <div class="stat-label">Other</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="triangleCount">0</div>
+                <div class="stat-label">Triangles</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="fps">60</div>
+                <div class="stat-label">FPS</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="viewer-container">
+        <canvas id="three-canvas"></canvas>
+        
+        <div id="loadingOverlay" class="loading-overlay">
+          <div class="spinner"></div>
+          <div class="loading-text">Loading 3D model...</div>
+          
+        </div>
+  <div class="status-bar">
+    <div class="status-item">
+      <span>Selected elements:</span>
+      <span id="selectedCount">0</span>
+    </div>
+    <div class="status-item">
+      <span>Triangles:</span>
+      <span id="triangleCountStatus">0</span>
+    </div>
+    <div class="status-item">
+      <span>FPS:</span>
+      <span id="fpsStatus">60</span>
+    </div>
+    <div class="status-item">
+      <span>Mode:</span>
+      <span id="currentMode">Edit</span>
+    </div>
+  </div>
+      </div>
+    </div>
+
+
+    <div id="elementInfoPanel" class="element-info-panel" style="display: none;">
+  <div class="element-info-header">
+<h4><i class="fas fa-info-circle"></i> Info Panel</h4>
+    <button class="close-info-btn">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="element-info-content">
+  </div>
+</div>
+  </main>
+
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+            })
+            .catch(function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+    });
+}
+</script>
+
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/OBJLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/FBXLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/ThreeMFLoader.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="{% static 'js/view_3d.js' %}"></script>
+  <script src="/static/js/history.js?v={{ timestamp }}"></script>
+<script src="/static/js/element-creator.js?v={{ timestamp }}"></script>
+<script src="/static/js/model-manager.js?v={{ timestamp }}"></script>
+<script src="/static/js/model-editor.js?v={{ timestamp }}"></script>
+<script src="/static/js/three-viewer.js?v={{ timestamp }}"></script>
+</body>
+</html>
