@@ -72,7 +72,7 @@ DATABASES = {
     }
 }
 
-MONGODB_URI = "mongodb+srv://nicaanatol_db_user:Itssecret1@cluster0.i4iey7b.mongodb.net/elmc3d"
+MONGODB_URI = ""
 mongoengine.connect(host=MONGODB_URI)
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
