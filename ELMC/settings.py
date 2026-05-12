@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'KEY'
+SECRET_KEY = 'django-insecure-)(%d2gtwkdck*!4w)8%=!44&cmb(el0in_kcz62$z2o!gz#yha'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -72,7 +72,7 @@ DATABASES = {
     }
 }
 
-MONGODB_URI = 'link'
+MONGODB_URI = "mongodb+srv://nicaanatol_db_user:Itssecret1@cluster0.i4iey7b.mongodb.net/elmc3d"
 mongoengine.connect(host=MONGODB_URI)
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

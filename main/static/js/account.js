@@ -9,7 +9,7 @@ async function checkAuth() {
     }
 
     try {
-        const response = await fetch('/auth/profile/', {
+        const response = await fetch('/api/users/me/', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -227,7 +227,7 @@ async function updateProfile(formData) {
     showLoading(true);
     
     try {
-        const response = await fetch('/api/account/profile/', {
+        const response = await fetch('/api/users/me/profile/', {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
@@ -255,7 +255,7 @@ async function changePassword(currentPassword, newPassword) {
     showLoading(true);
     
     try {
-        const response = await fetch('/api/account/password/', {
+        const response = await fetch('/api/users/me/password/', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -321,7 +321,7 @@ async function loadUserModels() {
     }
     
     try {
-        const response = await fetch('/api/account/models/detailed/', {
+        const response = await fetch('/api/users/me/models/detailed/', {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             }
@@ -531,7 +531,7 @@ function renderModels() {
         modelsGrid.innerHTML = modelsToShow.map(model => {
             const thumbnailUrl = model.thumbnail 
                 ? model.thumbnail 
-                : `/api/project/${model.file_id}/thumbnail/image/`;
+                : `/api/models/${model.file_id}/thumbnail/image/`;
             
             const maxDescLength = 150;
             let description = model.description || 'No description added';
@@ -813,7 +813,7 @@ function cancelModelEdit(fileId) {
 
 async function loadUserStats() {
     try {
-        const response = await fetch('/api/account/stats/', {
+        const response = await fetch('/api/users/me/stats/', {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             }
@@ -852,7 +852,7 @@ async function loadModelPreview(fileId) {
     spinner.style.display = 'block';
     
     try {
-        const response = await fetch(`/api/project/${fileId}/camera-position/`, {
+        const response = await fetch(`/api/models/${fileId}//camera/`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             }
@@ -940,11 +940,11 @@ function showLoading(show) {
 checkAuth();
 
 function downloadGLBModel(fileId) {
-    window.open(`/api/glb-file/${fileId}/`, '_blank');
+    window.open(`/api/models/export/${fileId}/glb/`, '_blank');
 }
 
 function downloadModel(fileId) {
-    window.open(`/api/download-data/${fileId}/`, '_blank');
+    window.open(`/api/models/${fileId}/`, '_blank');
 }
 
 function downloadModelArchive(fileId) {
@@ -952,7 +952,7 @@ function downloadModelArchive(fileId) {
     
     const token = localStorage.getItem('auth_token');
     
-    fetch(`/api/download-model-archive/${fileId}/`, {
+    fetch(`/api/models/${fileId}/archive/`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -987,7 +987,7 @@ async function editModel(fileId) {
     event.stopPropagation();
     
     try {
-        const response = await fetch(`/api/account/model/${fileId}/stats/`, {
+        const response = await fetch(`/api/models/${fileId}/stats/`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             }
@@ -1015,7 +1015,7 @@ async function updateModelDetails(fileId, title, description) {
     showLoading(true);
     
     try {
-        const response = await fetch(`/api/account/model/${fileId}/update/`, {
+        const response = await fetch(`/api/models/${fileId}/`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1057,7 +1057,7 @@ async function toggleModelPublic(fileId, event) {
     toggleButton.disabled = true;
     
     try {
-        const response = await fetch(`/api/project/${fileId}/toggle-public/`, {
+        const response = await fetch(`/api/models/${fileId}/toggle-public/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1123,7 +1123,7 @@ async function togglePublicSwitch(fileId, event) {
     const initialState = isChecked;
     
     try {
-        const response = await fetch(`/api/project/${fileId}/toggle-public/`, {
+        const response = await fetch(`/api/models/${fileId}/toggle-public/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1176,7 +1176,7 @@ async function toggleModelVisibility(fileId) {
     showLoading(true);
     
     try {
-        const response = await fetch(`/api/account/model/${fileId}/toggle-visibility/`, {
+        const response = await fetch(`/api/models/${fileId}/visibility/`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1259,7 +1259,7 @@ async function deleteModel(fileId) {
     showLoading(true);
     
     try {
-        const response = await fetch(`/api/account/model/${fileId}/delete/`, {
+        const response = await fetch(`/api/models/${fileId}/`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -1305,7 +1305,7 @@ async function saveModelEdit(fileId) {
     showLoading(true);
     
     try {
-        const response = await fetch(`/api/account/model/${fileId}/update/`, {
+        const response = await fetch(`/api/models/${fileId}/`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1398,7 +1398,7 @@ async function saveEditModel(fileId) {
     showLoading(true);
     
     try {
-        const response = await fetch(`/api/account/model/${fileId}/update/`, {
+        const response = await fetch(`/api/models/${fileId}/`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1752,7 +1752,7 @@ async function loadUserModels() {
     showLoading(true);
     
     try {
-        const response = await fetch('/api/account/models/detailed/', {
+        const response = await fetch('/api/users/me/models/detailed/', {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             }
@@ -1811,7 +1811,7 @@ async function loadFavoriteModels() {
     try {
         const token = localStorage.getItem('auth_token');
         
-        const response = await fetch('/api/account/favorites/', {
+        const response = await fetch('/api/users/me/favorites/', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -1871,7 +1871,7 @@ function renderFavoriteModels() {
         favoritesGrid.innerHTML = filteredFavoriteModels.map(model => {
             const thumbnailUrl = model.thumbnail 
                 ? model.thumbnail 
-                : `/api/project/${model.file_id}/thumbnail/image/`;
+                : `/api/models/${model.file_id}/thumbnail/image/`;
             
             const timeAgo = getTimeAgo(new Date(model.created_at));
             
@@ -1966,7 +1966,7 @@ async function removeFromFavorites(fileId, button) {
     if (!token) return;
     
     try {
-        const response = await fetch(`/api/favorite/${fileId}/toggle/`, {
+        const response = await fetch(`/api/models/${fileId}/favorites/`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -2118,7 +2118,7 @@ function toggleFavoriteDescription(fileId) {
 
 async function testFavorites() {
     const token = localStorage.getItem('auth_token');
-    const response = await fetch('/api/account/favorites/', {
+    const response = await fetch('/api/users/me/favorites/', {
         headers: {
             'Authorization': `Bearer ${token}`
         }
@@ -2269,7 +2269,7 @@ async function loadModelInViewer(fileId, modelData = null) {
             updateModelInfoPanel(modelData);
         }
         
-        let glbUrl = `/api/glb-file/${fileId}/`;
+        let glbUrl = `/api/models/export/${fileId}/glb/`;
         
         const checkResponse = await fetch(glbUrl, { method: 'HEAD' });
         if (!checkResponse.ok) {
@@ -2510,7 +2510,7 @@ async function deleteAccount() {
     showLoading(true);
     
     try {
-        const response = await fetch('/api/account/delete/', {
+        const response = await fetch('/api/users/me/', {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',

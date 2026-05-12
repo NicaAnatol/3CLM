@@ -23,40 +23,40 @@ class ModelManager {
         
         this.textureUrls = {
             'building': {
-                'top': '/api/element-texture/?type=building&face=top',
-                'aside': '/api/element-texture/?type=building&face=aside', 
-                'side': '/api/element-texture/?type=building&face=side',
-                'bottom': '/api/element-texture/?type=building&face=bottom'
+                'top': '/api/textures/element/?type=building&face=top',
+                'aside': '/api/textures/element/?type=building&face=aside', 
+                'side': '/api/textures/element/?type=building&face=side',
+                'bottom': '/api/textures/element/?type=building&face=bottom'
             },
             'highway': {
-                'top': '/api/element-texture/?type=road&face=top',
-                'aside': '/api/element-texture/?type=road&face=aside', 
-                'side': '/api/element-texture/?type=road&face=side',
-                'bottom': '/api/element-texture/?type=road&face=bottom'
+                'top': '/api/textures/element/?type=road&face=top',
+                'aside': '/api/textures/element/?type=road&face=aside', 
+                'side': '/api/textures/element/?type=road&face=side',
+                'bottom': '/api/textures/element/?type=road&face=bottom'
             },
             'water': {
-                'top': '/api/element-texture/?type=water&face=top',
-                'aside': '/api/element-texture/?type=water&face=aside', 
-                'side': '/api/element-texture/?type=water&face=side',
-                'bottom': '/api/element-texture/?type=water&face=bottom'
+                'top': '/api/textures/element/?type=water&face=top',
+                'aside': '/api/textures/element/?type=water&face=aside', 
+                'side': '/api/textures/element/?type=water&face=side',
+                'bottom': '/api/textures/element/?type=water&face=bottom'
             },
             'natural': {
-                'top': '/api/element-texture/?type=natural&face=top',
-                'aside': '/api/element-texture/?type=natural&face=aside', 
-                'side': '/api/element-texture/?type=natural&face=side',
-                'bottom': '/api/element-texture/?type=natural&face=bottom'
+                'top': '/api/textures/element/?type=natural&face=top',
+                'aside': '/api/textures/element/?type=natural&face=aside', 
+                'side': '/api/textures/element/?type=natural&face=side',
+                'bottom': '/api/textures/element/?type=natural&face=bottom'
             },
             'landuse': {
-                'top': '/api/element-texture/?type=landuse&face=top',
-                'aside': '/api/element-texture/?type=landuse&face=aside', 
-                'side': '/api/element-texture/?type=landuse&face=side',
-                'bottom': '/api/element-texture/?type=landuse&face=bottom'
+                'top': '/api/textures/element/?type=landuse&face=top',
+                'aside': '/api/textures/element/?type=landuse&face=aside', 
+                'side': '/api/textures/element/?type=landuse&face=side',
+                'bottom': '/api/textures/element/?type=landuse&face=bottom'
             },
             'other': {
-                'top': '/api/element-texture/?type=other&face=top',
-                'aside': '/api/element-texture/?type=other&face=aside', 
-                'side': '/api/element-texture/?type=other&face=side',
-                'bottom': '/api/element-texture/?type=other&face=bottom'
+                'top': '/api/textures/element/?type=other&face=top',
+                'aside': '/api/textures/element/?type=other&face=aside', 
+                'side': '/api/textures/element/?type=other&face=side',
+                'bottom': '/api/textures/element/?type=other&face=bottom'
             }
         };
 
@@ -70,7 +70,7 @@ class ModelManager {
     
     async loadAvailableTextures() {
         try {
-            const response = await fetch('/api/available-textures/');
+            const response = await fetch('/api/textures/');
             const data = await response.json();
             if (data.success) {
                 this.availableTextures = data.textures;

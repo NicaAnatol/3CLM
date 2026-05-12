@@ -212,7 +212,7 @@
             return;
         }
         try {
-            const response = await fetch('/auth/profile/', {
+            const response = await fetch('/api/users/me/', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },

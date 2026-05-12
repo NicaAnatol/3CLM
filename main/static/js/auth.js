@@ -94,7 +94,7 @@
             submitBtn.disabled = true;
 
             try {
-                const response = await fetch('/auth/login/', {
+                const response = await fetch('/api/auth/login/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -159,7 +159,7 @@
             submitBtn.disabled = true;
 
             try {
-                const response = await fetch('/auth/register/', {
+                const response = await fetch('/api/auth/register/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -212,7 +212,7 @@
         function checkAuth() {
             const token = localStorage.getItem('auth_token');
             if (token) {
-                fetch('/auth/profile/', {
+                fetch('/api/users/me/', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }

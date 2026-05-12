@@ -407,7 +407,7 @@ async loadAvailableTextures() {
 
         textureList.innerHTML = '<div style="padding: 1rem; text-align: center; color: #94a3b8;">Loading textures..</div>';
 
-        const response = await fetch('/api/available-textures/');
+        const response = await fetch('/api/textures/');
         const data = await response.json();
         
         if (data.success && data.textures) {

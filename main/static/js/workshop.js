@@ -15,7 +15,7 @@ async function checkAuth() {
     
     if (token) {
         try {
-            const response = await fetch('/auth/profile/', {
+            const response = await fetch('/api/users/me/', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -69,7 +69,7 @@ async function loadPublicModels(page = 1) {
             headers['Authorization'] = `Bearer ${token}`;
         }
         
-        const response = await fetch(`/api/public-models/?${params}`, {
+        const response = await fetch(`/api/models/?${params}`, {
             headers: headers
         });
         const data = await response.json();
@@ -108,7 +108,7 @@ function displayModels(models) {
     
     modelsGrid.innerHTML = models.map(model => {
         const thumbnailUrl = model.thumbnail || 
-            `/api/project/${model.file_id}/thumbnail/image/` ||
+            `/api/models/${model.file_id}/thumbnail/image/` ||
             '/static/default-model-thumbnail.png';
         
         const timeAgo = getTimeAgo(new Date(model.created_at));
@@ -245,7 +245,7 @@ function downloadModelArchive(fileId) {
 
 async function downloadWithAuth(fileId, token) {
     try {
-        const response = await fetch(`/api/download-model-archive/${fileId}/`, {
+        const response = await fetch(`/api/models/${fileId}/archive/`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -291,7 +291,7 @@ async function downloadWithAuth(fileId, token) {
 function downloadWithoutAuth(fileId) {
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
-    iframe.src = `/api/download-model-archive/${fileId}/`;
+    iframe.src = `/api/models/${fileId}/archive/`;
     document.body.appendChild(iframe);
     
     setTimeout(() => {
@@ -302,7 +302,7 @@ function downloadWithoutAuth(fileId) {
     
     setTimeout(() => {
         const directLink = document.createElement('a');
-        directLink.href = `/api/download-model-archive/${fileId}/`;
+        directLink.href = `/api/models/${fileId}/archive/`;
         directLink.download = `${fileId}_model.zip`;
         directLink.style.display = 'none';
         document.body.appendChild(directLink);
@@ -633,7 +633,7 @@ async function loadGLBModel(fileId, modelData = null) {
             updateModelInfoPanel(modelData);
         }
         
-        let glbUrl = `/api/glb-file/${fileId}/`;
+        let glbUrl = `/api/models/export/${fileId}/glb/`;
         
         const checkResponse = await fetch(glbUrl, { method: 'HEAD' });
         if (!checkResponse.ok) {
@@ -744,7 +744,7 @@ async function incrementModelView(fileId, modelData = null) {
         
         let response;
         try {
-            response = await fetch(`/api/public-model/${fileId}/view/`, {
+            response = await fetch(`/api/models/${fileId}/views/`, {
                 method: 'POST',
                 headers: headers,
                 signal: controller.signal
@@ -955,7 +955,7 @@ async function updateModelViewsInBackground(fileId) {
             headers['Authorization'] = `Bearer ${token}`;
         }
         
-        const response = await fetch(`/api/public-model/${fileId}/view/`, {
+        const response = await fetch(`/api/models/${fileId}/views/`, {
             method: 'POST',
             headers: headers
         });
@@ -1041,7 +1041,7 @@ function toggleFavorite(fileId, button, modelData = null) {
     
     const allFavoriteButtons = document.querySelectorAll(`[data-file-id="${fileId}"] .favorite-btn, .thumbnail-favorite-btn[onclick*="${fileId}"]`);
     
-    fetch(`/api/favorite/${fileId}/toggle/`, {
+    fetch(`/api/models/${fileId}/favorites/`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,

@@ -1283,7 +1283,7 @@ async fetchBuildingData(fileId) {
     try {
         this.setCurrentFileId(fileId);
         
-        const infoResponse = await fetch(`/api/data/${fileId}/`);
+        const infoResponse = await fetch(`/api/models/${fileId}/`);
         if (!infoResponse.ok) {
             throw new Error(`HTTP error while fetching info: ${infoResponse.status}`);
         }
@@ -1292,12 +1292,12 @@ async fetchBuildingData(fileId) {
         
         if (infoResult.success) {
             if (infoResult.file_type === 'glb') {
-                const downloadUrl = infoResult.download_url || `/api/glb-file/${fileId}/`;
+                const downloadUrl = infoResult.download_url || `/api/models/export/${fileId}/glb/`;
                 await this.loadGLBFromURL(downloadUrl, fileId);
                 
             } else {
                 
-                const dataResponse = await fetch(infoResult.download_url || `/api/download/${fileId}.json`);
+                const dataResponse = await fetch(infoResult.download_url || `/api/files/${fileId}.json`);
                     
                 if (!dataResponse.ok) {
                     throw new Error(`HTTP error while fetching data: ${dataResponse.status}`);
@@ -1670,7 +1670,7 @@ async saveExportToServer(zipBlob, elementCount) {
         const projectName = document.getElementById('project-name')?.value || `Model ${currentFileId}`;
         formData.append('project_name', projectName);
 
-        const response = await fetch('/api/save-export/', {
+        const response = await fetch('/api/models/export/', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1762,7 +1762,7 @@ async saveExportToServer(blob, elementCount) {
         const projectName = document.getElementById('project-name')?.value || `Model ${currentFileId}`;
         formData.append('project_name', projectName);
 
-        const response = await fetch('/api/save-export/', {
+        const response = await fetch('/api/models/export/', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1848,7 +1848,7 @@ async transmitThumbnailToServer(fileId, thumbnailData) {
         
         
         
-        const response = await fetch(`/api/project/${fileId}/thumbnail/`, {
+        const response = await fetch(`/api/models/${fileId}/thumbnail/`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1921,7 +1921,7 @@ async saveThumbnailToServer(fileId) {
             return false;
         }
         
-        const response = await fetch(`/api/project/${fileId}/thumbnail/`, {
+        const response = await fetch(`/api/models/${fileId}/thumbnail/`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -2050,7 +2050,7 @@ setCurrentFileId(fileId) {
 
 
 downloadGLBModel(fileId) {
-    window.open(`/api/glb-file/${fileId}/`, '_blank');
+    window.open(`/api/models/export/${fileId}/glb/`, '_blank');
 }
 
 

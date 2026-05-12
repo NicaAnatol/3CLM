@@ -614,7 +614,7 @@ async function saveBuildingDataToAPI(geojson, bounds, origin, dataTypes) {
     
     
     try {
-        const response = await fetch('/api/save-data/', {
+        const response = await fetch('/api/models/import/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

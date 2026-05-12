@@ -242,7 +242,24 @@ def service_worker_root(request):
     response['Service-Worker-Allowed'] = '/'
     return response
 
-
+@csrf_exempt
+def model_router(request, file_id):
+    """Router care direcționează pe baza metodei HTTP"""
+    
+    # Verifică dacă acesta este de fapt un request pentru export
+    if file_id == 'export' and request.method == 'POST':
+        # Redirecționează către save_export
+        return save_export(request)
+    
+    if request.method == 'GET':
+        return get_building_data(request, file_id)
+    elif request.method == 'PUT':
+        return update_model(request, file_id)
+    elif request.method == 'DELETE':
+        return delete_model(request, file_id)
+    else:
+        return JsonResponse({'error': f'Method {request.method} not allowed for this endpoint'}, status=405)
+    
 def service_worker(request):
     possible_paths = [
         os.path.join(settings.BASE_DIR, 'static', 'pwa', 'serviceworker.js'),
@@ -437,7 +454,7 @@ def get_building_data(request, file_id):
                     'file_id': file_id,
                     'file_type': 'glb',
                     'message': 'The GLB file is available in the database',
-                    'download_url': f'/api/glb-file/{file_id}/',
+                    'download_url': f'api/models/export/{file_id}/glb/',
                     'has_json': False, 
                     'project_info': {
                         'title': user_model.title,
@@ -457,7 +474,7 @@ def get_building_data(request, file_id):
                 'file_id': file_id,
                 'file_type': 'json',
                 'message': 'The JSON file is available',
-                'download_url': f'/api/download/{file_id}.json',
+                'download_url': f'/api/files/{file_id}.json',
                 'has_json': True 
             })
 
@@ -1049,12 +1066,12 @@ def available_textures(request):
             if any(filename.lower().endswith(ext) for ext in supported_formats):
                 texture_path = os.path.join(textures_dir, filename)
                 
-                thumbnail_url = f'/api/element-texture/?texture={filename}&face=top'
+                thumbnail_url = f'/api/textures/element/?texture={filename}&face=top'
                 
                 texture_files.append({
                     'name': os.path.splitext(filename)[0],
                     'filename': filename,
-                    'url': f'/api/element-texture/?texture={filename}&face=top',
+                    'url': f'/api/textures/element/?texture={filename}&face=top',
                     'thumbnail': thumbnail_url,
                     'category': self.get_texture_category(filename)
                 })
@@ -1148,8 +1165,8 @@ def get_available_textures_list():
             textures.append({
                 'name': name_without_ext,
                 'filename': filename,
-                'url': f'/api/element-texture/?texture={name_without_ext}',
-                'thumbnail': f'/api/element-texture/?texture={name_without_ext}&face=top',
+                'url': f'/api/textures/element/?texture={name_without_ext}',
+                'thumbnail': f'/api/textures/element/?texture={name_without_ext}&face=top',
                 'category': get_texture_category(filename)
             })
     
@@ -1210,7 +1227,7 @@ def export_project(request):
                 'success': True,
                 'file_id': file_id,
                 'project_name': project_data['project_name'],
-                'download_url': f'/api/download/{file_id}.json',
+                'download_url': f'/api/files/{file_id}.json',
                 'message': 'Project saved successfully'
             })
             
@@ -2586,9 +2603,9 @@ def get_public_models(request):
                     try:
                         thumbnail_url = model.thumbnail.url
                     except:
-                        thumbnail_url = f'/api/project/{model.file_id}/thumbnail/image/'
+                        thumbnail_url = f'/api/models/{model.file_id}/thumbnail/image/'
                 else:
-                    thumbnail_url = f'/api/project/{model.file_id}/thumbnail/image/'
+                    thumbnail_url = f'/api/models/{model.file_id}/thumbnail/image/'
                 
                 is_owner = current_user and model.user.id == current_user.id
                 
@@ -2751,9 +2768,9 @@ def get_user_favorites(request):
                 try:
                     thumbnail_url = model.thumbnail.url
                 except:
-                    thumbnail_url = f'/api/project/{model.file_id}/thumbnail/image/'
+                    thumbnail_url = f'/api/models/{model.file_id}/thumbnail/image/'
             else:
-                thumbnail_url = f'/api/project/{model.file_id}/thumbnail/image/'
+                thumbnail_url = f'/api/models/{model.file_id}/thumbnail/image/'
             
             favorites_count = len(model.favorites or [])
             
@@ -2887,28 +2904,51 @@ def delete_model(request, file_id):
                     'error': 'The model was not found or does not belong to your account'
                 }, status=404)
             
-            user_model.favorites.clear()
+            # Șterge din lista de favorites (dacă există)
+            if hasattr(user_model, 'favorites'):
+                try:
+                    user_model.favorites.clear()
+                except:
+                    pass
             
+            # Șterge fișierul JSON
             json_filename = os.path.join(settings.MEDIA_ROOT, 'models', f'{file_id}.json')
             if os.path.exists(json_filename):
                 os.remove(json_filename)
-             
             
+            # Șterge fișierul GLB
             glb_filename = os.path.join(settings.MEDIA_ROOT, 'exports', 'user_exports', f'{file_id}.glb')
             if os.path.exists(glb_filename):
                 os.remove(glb_filename)
             
-            
+            # Șterge fișierul GLB cu prefix export_
             glb_export_filename = os.path.join(settings.MEDIA_ROOT, 'exports', 'user_exports', f'export_{file_id}.glb')
             if os.path.exists(glb_export_filename):
                 os.remove(glb_export_filename)
-              
             
+            # === MODIFICARE AICI ===
+            # Verifică dacă thumbnail este string (cale) sau obiect FileField
             if user_model.thumbnail:
-                thumbnail_path = user_model.thumbnail.path
-                if os.path.exists(thumbnail_path):
-                    os.remove(thumbnail_path)
-
+                try:
+                    # Dacă thumbnail este string (cale salvată în DB)
+                    if isinstance(user_model.thumbnail, str):
+                        thumbnail_path = os.path.join(settings.MEDIA_ROOT, user_model.thumbnail)
+                    else:
+                        # Dacă este obiect FileField
+                        thumbnail_path = user_model.thumbnail.path
+                    
+                    if os.path.exists(thumbnail_path):
+                        os.remove(thumbnail_path)
+                except Exception as e:
+                    print(f"Error deleting thumbnail: {str(e)}")
+            
+            # Șterge și fișierul GLB din storage (dacă există câmpul glb_file)
+            if hasattr(user_model, 'glb_file') and user_model.glb_file:
+                try:
+                    if default_storage.exists(user_model.glb_file.name):
+                        default_storage.delete(user_model.glb_file.name)
+                except Exception as e:
+                    print(f"Error deleting GLB file from storage: {str(e)}")
             
             user_model.delete()
             
@@ -2922,7 +2962,9 @@ def delete_model(request, file_id):
             })
             
         except Exception as e:
-            print(f" Error deleting the model: {str(e)}")
+            print(f"Error deleting the model: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return JsonResponse({
                 'success': False,
                 'error': f'Error deleting the model: {str(e)}'
@@ -3232,9 +3274,9 @@ def get_featured_models(request):
                 try:
                     thumbnail_url = model.thumbnail.url
                 except:
-                    thumbnail_url = f'/api/project/{model.file_id}/thumbnail/image/'
+                    thumbnail_url = f'/api/models/{model.file_id}/thumbnail/image/'
             else:
-                thumbnail_url = f'/api/project/{model.file_id}/thumbnail/image/'
+                thumbnail_url = f'/api/models/{model.file_id}/thumbnail/image/'
             
 
             favorites_count = len(model.favorites or []) if hasattr(model, 'favorites') else 0
@@ -3582,7 +3624,7 @@ def doc_offline(request):
 @api_view(['POST'])
 def doc_register(request):
     return Response({
-        'endpoint': '/auth/register/',
+        'endpoint': '/api/auth/register/',
         'method': 'POST',
         'authentication': 'Not required',
         'content_type': 'application/json',
@@ -3639,7 +3681,7 @@ def doc_register(request):
 @api_view(['POST'])
 def doc_login(request):
     return Response({
-        'endpoint': '/auth/login/',
+        'endpoint': '/api/auth/login/',
         'method': 'POST',
         'authentication': 'Not required',
         'content_type': 'application/json',
@@ -3682,7 +3724,7 @@ def doc_login(request):
 @api_view(['DELETE'])
 def doc_logout(request):
     return Response({
-        'endpoint': '/auth/logout/',
+        'endpoint': '/api/auth/logout/',
         'method': 'DELETE',
         'authentication': 'Bearer token required',
         'headers': {'Authorization': 'Bearer <token>'},
@@ -3720,7 +3762,7 @@ def doc_logout(request):
 @api_view(['GET'])
 def doc_get_profile(request):
     return Response({
-        'endpoint': '/auth/profile/',
+        'endpoint': '/api/users/me/',
         'method': 'GET',
         'authentication': 'Bearer token required',
         'headers': {'Authorization': 'Bearer <token>'},
@@ -3766,7 +3808,7 @@ def doc_get_profile(request):
 @api_view(['PUT'])
 def doc_update_profile(request):
     return Response({
-        'endpoint': '/api/account/profile/',
+        'endpoint': '/api/users/me/profile/',
         'method': 'PUT',
         'authentication': 'Bearer token required',
         'content_type': 'multipart/form-data',
@@ -3812,7 +3854,7 @@ def doc_update_profile(request):
 @api_view(['PUT'])
 def doc_change_password(request):
     return Response({
-        'endpoint': '/api/account/password/',
+        'endpoint': '/api/users/me/password/',
         'method': 'PUT',
         'authentication': 'Bearer token required',
         'content_type': 'application/json',
@@ -3844,7 +3886,7 @@ def doc_change_password(request):
 @api_view(['GET'])
 def doc_account_stats(request):
     return Response({
-        'endpoint': '/api/account/stats/',
+        'endpoint': '/api/users/me/stats/',
         'method': 'GET',
         'authentication': 'Bearer token required',
         'response': {
@@ -3892,7 +3934,7 @@ def doc_account_stats(request):
 @api_view(['GET'])
 def doc_user_models_detailed(request):
     return Response({
-        'endpoint': '/api/account/models/detailed/',
+        'endpoint': '/api/users/me/models/detailed/',
         'method': 'GET',
         'authentication': 'Bearer token required',
         'response': {
@@ -3940,7 +3982,7 @@ def doc_user_models_detailed(request):
 @api_view(['GET'])
 def doc_user_favorites(request):
     return Response({
-        'endpoint': '/api/account/favorites/',
+        'endpoint': '/api/users/me/favorites/',
         'method': 'GET',
         'authentication': 'Bearer token required',
         'response': {
@@ -4001,7 +4043,7 @@ def doc_user_favorites(request):
 @api_view(['DELETE'])
 def doc_delete_account(request):
     return Response({
-        'endpoint': '/api/account/delete/',
+        'endpoint': '/api/users/me/',
         'method': 'DELETE',
         'authentication': 'Bearer token required',
         'request_body': {'password': {'type': 'string', 'required': True}},
@@ -4047,7 +4089,7 @@ def doc_delete_account(request):
 @api_view(['POST'])
 def doc_save_data(request):
     return Response({
-        'endpoint': '/api/save-data/',
+        'endpoint': '/api/models/import/',
         'method': 'POST',
         'authentication': 'Bearer token optional (saves to account if provided)',
         'request_body': {
@@ -4093,7 +4135,7 @@ def doc_save_data(request):
 @api_view(['POST'])
 def doc_save_export(request):
     return Response({
-        'endpoint': '/api/save-export/',
+        'endpoint': '/api/models/export/',
         'method': 'POST',
         'authentication': 'Bearer token required',
         'content_type': 'multipart/form-data',
@@ -4141,7 +4183,7 @@ def doc_save_export(request):
 @api_view(['PUT'])
 def doc_update_model(request, file_id=None):
     return Response({
-        'endpoint': f'/api/account/model/{file_id or "{file_id}"}/update/',
+        'endpoint': f'/api/models/{file_id or "{file_id}"}/',
         'method': 'PUT',
         'authentication': 'Bearer token required',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
@@ -4176,7 +4218,7 @@ def doc_update_model(request, file_id=None):
 @api_view(['DELETE'])
 def doc_delete_model(request, file_id=None):
     return Response({
-        'endpoint': f'/api/account/model/{file_id or "{file_id}"}/delete/',
+        'endpoint': f'/api/models/{file_id or "{file_id}"}/',
         'method': 'DELETE',
         'authentication': 'Bearer token required',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
@@ -4201,7 +4243,7 @@ def doc_delete_model(request, file_id=None):
 @api_view(['PUT'])
 def doc_toggle_visibility(request, file_id=None):
     return Response({
-        'endpoint': f'/api/account/model/{file_id or "{file_id}"}/toggle-visibility/',
+        'endpoint': f'/api/models/{file_id or "{file_id}"}/visibility/',
         'method': 'PUT',
         'authentication': 'Bearer token required',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
@@ -4234,7 +4276,7 @@ def doc_toggle_visibility(request, file_id=None):
 @api_view(['GET'])
 def doc_public_models(request):
     return Response({
-        'endpoint': '/api/public-models/',
+        'endpoint': '/api/models/',
         'method': 'GET',
         'query_parameters': {
             'page': {'type': 'integer', 'default': 1},
@@ -4304,7 +4346,7 @@ def doc_public_models(request):
 @api_view(['POST'])
 def doc_toggle_favorite(request, file_id=None):
     return Response({
-        'endpoint': f'/api/favorite/{file_id or "{file_id}"}/toggle/',
+        'endpoint': f'/api/models/{file_id or "{file_id}"}/favorites/',
         'method': 'POST',
         'authentication': 'Bearer token required',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
@@ -4364,7 +4406,7 @@ def doc_workshop_stats(request):
 @api_view(['GET'])
 def doc_featured_models(request):
     return Response({
-        'endpoint': '/api/featured-models/',
+        'endpoint': '/api/models/featured/',
         'method': 'GET',
         'response': {
             'success': True,
@@ -4404,7 +4446,7 @@ def doc_featured_models(request):
 @api_view(['GET'])
 def doc_health(request):
     return Response({
-        'endpoint': '/health/',
+        'endpoint': '/api/health/',
         'method': 'GET',
         'response': {
             'status': 'healthy',
@@ -4431,7 +4473,7 @@ def doc_health(request):
 @api_view(['GET'])
 def doc_get_building_data(request, file_id):
     return Response({
-        'endpoint': f'/api/data/{file_id}/',
+        'endpoint': f'/api/models/{file_id}/',
         'method': 'GET',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
         'response': {
@@ -4465,7 +4507,7 @@ def doc_get_building_data(request, file_id):
 @api_view(['GET'])
 def doc_download_building_data(request, file_id):
     return Response({
-        'endpoint': f'/api/download-data/{file_id}/',
+        'endpoint': f'/api/models/{file_id}/',
         'method': 'GET',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
         'response': 'JSON file with Content-Type: application/json',
@@ -4486,7 +4528,7 @@ def doc_download_building_data(request, file_id):
 @api_view(['POST'])
 def doc_export_glb(request, file_id):
     return Response({
-        'endpoint': f'/api/export/{file_id}/',
+        'endpoint': f'api/models/{file_id}/export/',
         'method': 'POST',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
         'response': 'GLB binary file',
@@ -4507,7 +4549,7 @@ def doc_export_glb(request, file_id):
 @api_view(['GET'])
 def doc_download_file(request, filename):
     return Response({
-        'endpoint': f'/api/download/{filename}/',
+        'endpoint': f'/api/files/{filename}/',
         'method': 'GET',
         'path_parameters': {'filename': {'type': 'string', 'required': True}},
         'response': 'File binary',
@@ -4530,7 +4572,7 @@ def doc_download_file(request, filename):
 @api_view(['GET'])
 def doc_get_glb_file(request, file_id):
     return Response({
-        'endpoint': f'/api/glb-file/{file_id}/',
+        'endpoint': f'/api/models/export/{file_id}/glb/',
         'method': 'GET',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
         'authentication': 'Bearer token optional (for private models)',
@@ -4555,7 +4597,7 @@ def doc_get_glb_file(request, file_id):
 @api_view(['GET'])
 def doc_download_export(request, file_id):
     return Response({
-        'endpoint': f'/api/download-export/{file_id}/',
+        'endpoint': f'/api/models/export/{file_id}/',
         'method': 'GET',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
         'authentication': 'Bearer token required for private models',
@@ -4580,7 +4622,7 @@ def doc_download_export(request, file_id):
 @api_view(['GET'])
 def doc_download_model_archive(request, file_id):
     return Response({
-        'endpoint': f'/api/download-model-archive/{file_id}/',
+        'endpoint': f'/api/models/{file_id}/archive/',
         'method': 'GET',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
         'response': {
@@ -4612,7 +4654,7 @@ def doc_download_model_archive(request, file_id):
 @api_view(['GET'])
 def doc_element_texture(request):
     return Response({
-        'endpoint': '/api/element-texture/',
+        'endpoint': '/api/textures/element/',
         'method': 'GET',
         'query_parameters': {
             'texture': {'type': 'string', 'required': False, 'default': 'default'},
@@ -4634,7 +4676,7 @@ def doc_element_texture(request):
 @api_view(['GET'])
 def doc_available_textures(request):
     return Response({
-        'endpoint': '/api/available-textures/',
+        'endpoint': '/api/textures/',
         'method': 'GET',
         'response': {
             'success': True,
@@ -4668,7 +4710,7 @@ def doc_available_textures(request):
 @api_view(['POST'])
 def doc_increment_model_view(request, file_id):
     return Response({
-        'endpoint': f'/api/public-model/{file_id}/view/',
+        'endpoint': f'/api/models/{file_id}/views/',
         'method': 'POST',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
         'authentication': 'Bearer token optional (to check ownership)',
@@ -4714,7 +4756,7 @@ def doc_increment_model_view(request, file_id):
 @api_view(['PUT'])
 def doc_update_project_thumbnail(request, file_id):
     return Response({
-        'endpoint': f'/api/project/{file_id}/thumbnail/',
+        'endpoint': f'/api/models/{file_id}/thumbnail/',
         'method': 'PUT',
         'authentication': 'Bearer token required',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
@@ -4744,7 +4786,7 @@ def doc_update_project_thumbnail(request, file_id):
 @api_view(['GET'])
 def doc_get_project_thumbnail(request, file_id):
     return Response({
-        'endpoint': f'/api/project/{file_id}/thumbnail/image/',
+        'endpoint': f'/api/models/{file_id}/thumbnail/image/',
         'method': 'GET',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
         'response': 'Image (JPEG/PNG) with Cache-Control: public, max-age=86400',
@@ -4766,7 +4808,7 @@ def doc_get_project_thumbnail(request, file_id):
 @api_view(['GET'])
 def doc_get_camera_position(request, file_id):
     return Response({
-        'endpoint': f'/api/project/{file_id}/camera-position/',
+        'endpoint': f'/api/models/{file_id}//camera/',
         'method': 'GET',
         'authentication': 'Bearer token required',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
@@ -4794,7 +4836,7 @@ def doc_get_camera_position(request, file_id):
 @api_view(['GET'])
 def doc_clear_data(request):
     return Response({
-        'endpoint': '/api/clear-data/',
+        'endpoint': '/api/cache/',
         'method': 'GET',
         'response': {'success': True, 'message': 'The system manages the storage automatically'}
     })
@@ -4810,7 +4852,7 @@ def doc_clear_data(request):
 @api_view(['GET'])
 def doc_session_info(request):
     return Response({
-        'endpoint': '/api/session-info/',
+        'endpoint': '/api/session/',
         'method': 'GET',
         'response': {
             'session_exists': 'boolean',
@@ -4829,7 +4871,7 @@ def api_docs(request):
         
         'authentication': {
             'required': 'Bearer token for protected endpoints',
-            'token_obtained': 'From /auth/login/ or /auth/register/',
+            'token_obtained': 'From /api/auth/login/ or /api/auth/register/',
             'token_header': 'Authorization: Bearer <token>'
         },
         'endpoints': {
@@ -4843,62 +4885,113 @@ def api_docs(request):
                 '/offline/': 'Offline fallback page'
             },
             'authentication': {
-                '/auth/register/': 'POST - Register new user',
-                '/auth/login/': 'POST - Login user',
-                '/auth/logout/': 'DELETE - Logout user',
-                '/auth/profile/': 'GET - Get user profile (requires token)',
-                '/api/account/delete/': 'DELETE - Delete user account (requires token)'
+                '/api/auth/register/': 'POST - Register new user',
+                '/api/auth/login/': 'POST - Login user',
+                '/api/auth/logout/': 'DELETE - Logout user',
             },
-            'account': {
-                '/api/account/profile/': 'PUT - Update user profile',
-                '/api/account/password/': 'PUT - Change password',
-                '/api/account/stats/': 'GET - Get account statistics',
-                '/api/account/models/': 'GET - Get user models (basic)',
-                '/api/account/models/detailed/': 'GET - Get detailed user models',
-                '/api/account/favorites/': 'GET - Get user favorites'
+            'users': {
+                '/api/users/me/': 'GET - Get current user profile | DELETE - Delete account',
+                '/api/users/me/profile/': 'PUT - Update user profile',
+                '/api/users/me/password/': 'PUT - Change password',
+                '/api/users/me/stats/': 'GET - Get account statistics',
+                '/api/users/me/models/': 'GET - Get user models (basic)',
+                '/api/users/me/models/detailed/': 'GET - Get detailed user models',
+                '/api/users/me/favorites/': 'GET - Get user favorites'
             },
-            'model_management': {
-                '/api/account/model/<file_id>/update/': 'PUT - Update model metadata',
-                '/api/account/model/<file_id>/delete/': 'DELETE - Delete model',
-                '/api/account/model/<file_id>/stats/': 'GET - Get model statistics',
-                '/api/account/model/<file_id>/toggle-visibility/': 'PUT - Toggle public/private',
-                '/api/save-export/': 'POST - Save GLB export with thumbnail',
-                '/api/save-data/': 'POST - Save building data (JSON + optional GLB)'
-            },
-            'data_access': {
-                '/api/data/<file_id>/': 'GET - Get building data info',
-                '/api/download-data/<file_id>/': 'GET - Download JSON data',
-                '/api/glb-file/<file_id>/': 'GET - Get GLB file (inline view)',
-                '/api/download-export/<file_id>/': 'GET - Download GLB file',
-                '/api/download/<filename>/': 'GET - Download any file',
-                '/api/download-model-archive/<file_id>/': 'GET - Download model archive (ZIP)'
-            },
-            'export': {
-                '/api/export/<file_id>/': 'POST - Export GLB file',
-                '/api/save-export/': 'POST - Save GLB export with metadata',
-                '/api/save-data/': 'POST - Save building data (with threading)'
+            'models': {
+                'collection': {
+                    'GET /api/models/': 'List public models (with pagination, filtering, sorting)',
+                    'POST /api/models/import/': 'Create model from GeoJSON data',
+                    'GET /api/models/featured/': 'Get featured/recommended models',
+                    'GET /api/workshop-stats/': 'Get workshop statistics',
+                    'POST /api/models/export/': 'Save GLB export with thumbnail'
+                },
+                'detail': {
+                    'GET /api/models/<file_id>/': 'Get model information',
+                    'PUT /api/models/<file_id>/': 'Update model metadata (title, description)',
+                    'DELETE /api/models/<file_id>/': 'Delete model',
+                    'GET /api/models/<file_id>/stats/': 'Get model statistics',
+                    'PUT /api/models/<file_id>/visibility/': 'Toggle public/private',
+                    'POST /api/models/<file_id>/views/': 'Increment view count',
+                    'POST /api/models/<file_id>/favorites/': 'Toggle favorite status'
+                },
+                'files': {
+                    'GET /api/models/<file_id>/archive/': 'Download model archive (ZIP with JSON + GLB)',
+                    'GET /api/models/export/<file_id>/glb/': 'Get GLB file (inline view)',
+                    'GET /api/models/export/<file_id>/': 'Download GLB file',
+                    'GET /api/models/<file_id>/thumbnail/': 'Get thumbnail image URL',
+                    'PUT /api/models/<file_id>/thumbnail/': 'Update project thumbnail',
+                    'GET /api/models/<file_id>/thumbnail/image/': 'Get thumbnail image file',
+                    'GET /api/models/<file_id>/camera/': 'Get saved camera position'
+                }
             },
             'textures': {
-                '/api/element-texture/': 'GET - Serve texture images',
-                '/api/available-textures/': 'GET - List available textures'
+                'GET /api/textures/': 'List available textures',
+                'GET /api/textures/element/': 'Get texture image for 3D elements'
             },
-            'workshop': {
-                '/api/public-models/': 'GET - Get public models with pagination',
-                '/api/public-model/<file_id>/view/': 'POST - Increment view count',
-                '/api/favorite/<file_id>/toggle/': 'POST - Toggle favorite status',
-                '/api/workshop-stats/': 'GET - Get workshop statistics',
-                '/api/featured-models/': 'GET - Get featured/recommended models'
+            'proxy': {
+                'POST /api/proxy/overpass/': 'Proxy for Overpass API (OpenStreetMap)'
             },
-            'pwa': {
-                '/sw.js': 'GET - Service worker root',
-                '/manifest.json': 'GET - Web app manifest',
-                '/offline/': 'GET - Offline fallback page'
+            'files': {
+                'GET /api/files/<filename>/': 'Download generic file (legacy)'
             },
             'system': {
-                '/api/clear-data/': 'GET - Clear building data',
-                '/api/session-info/': 'GET - Get session information',
-                '/health/': 'GET - Health check endpoint',
-                '/api/docs/': 'GET - This documentation'
+                'GET /api/health/': 'Health check endpoint',
+                'GET /api/session/': 'Get session information',
+                'GET /api/cache/': 'Clear building data (info only)'
+            },
+            'pwa': {
+                'GET /sw.js': 'Service worker root',
+                'GET /manifest.json': 'Web app manifest'
+            },
+            'documentation': {
+                'GET /swagger/': 'Swagger UI documentation',
+                'GET /redoc/': 'ReDoc documentation',
+                'GET /api/docs/': 'This documentation'
+            }
+        },
+        'examples': {
+            'create_model': {
+                'method': 'POST',
+                'url': '/api/models/import/',
+                'headers': {'Content-Type': 'application/json', 'Authorization': 'Bearer <token>'},
+                'body': {
+                    'geojson': {'type': 'FeatureCollection', 'features': [...]},
+                    'bounds': {'north': 45.5, 'south': 45.4, 'east': 9.2, 'west': 9.1},
+                    'origin': [0, 0],
+                    'dataType': 'building'
+                }
+            },
+            'export_model': {
+                'method': 'POST',
+                'url': '/api/models/export/',
+                'headers': {'Authorization': 'Bearer <token>'},
+                'body': 'multipart/form-data with glb_file'
+            },
+            'update_model': {
+                'method': 'PUT',
+                'url': '/api/models/project_abc123/',
+                'headers': {'Content-Type': 'application/json', 'Authorization': 'Bearer <token>'},
+                'body': {'title': 'New Title', 'description': 'New description'}
+            },
+            'toggle_visibility': {
+                'method': 'PUT',
+                'url': '/api/models/project_abc123/visibility/',
+                'headers': {'Authorization': 'Bearer <token>'}
+            },
+            'delete_model': {
+                'method': 'DELETE',
+                'url': '/api/models/project_abc123/',
+                'headers': {'Authorization': 'Bearer <token>'}
+            },
+            'favorite': {
+                'method': 'POST',
+                'url': '/api/models/project_abc123/favorites/',
+                'headers': {'Authorization': 'Bearer <token>'}
+            },
+            'increment_view': {
+                'method': 'POST',
+                'url': '/api/models/project_abc123/views/'
             }
         }
     }
