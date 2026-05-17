@@ -1283,7 +1283,7 @@ async fetchBuildingData(fileId) {
     try {
         this.setCurrentFileId(fileId);
         
-        const infoResponse = await fetch(`/api/models/${fileId}/`);
+        const infoResponse = await fetch(`/api/models/${fileId}/?info=true`);
         if (!infoResponse.ok) {
             throw new Error(`HTTP error while fetching info: ${infoResponse.status}`);
         }

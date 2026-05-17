@@ -2126,7 +2126,11 @@ async function testFavorites() {
     const data = await response.json();
 }
 testFavorites();
-
+let viewerScene, viewerCamera, viewerRenderer, viewerControls;
+let currentGLBModel = null;
+let autoRotateEnabled = true;
+let wireframeEnabled = false;
+let currentFileId = null;
 function initThreeViewer() {
     const container = document.getElementById('modelCanvas');
     if (!container) {

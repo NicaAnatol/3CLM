@@ -259,7 +259,17 @@ def model_router(request, file_id):
         return delete_model(request, file_id)
     else:
         return JsonResponse({'error': f'Method {request.method} not allowed for this endpoint'}, status=405)
-    
+
+@csrf_exempt
+def user_router(request):
+    if request.method == 'GET':
+        return get_user_profile(request)
+    elif request.method == 'PUT':
+        return update_profile(request)
+    elif request.method == 'DELETE':
+        return delete_account(request)
+    else:
+        return JsonResponse({'error': f'Method {request.method} not allowed for this endpoint'}, status=405)
 def service_worker(request):
     possible_paths = [
         os.path.join(settings.BASE_DIR, 'static', 'pwa', 'serviceworker.js'),
@@ -454,7 +464,7 @@ def get_building_data(request, file_id):
                     'file_id': file_id,
                     'file_type': 'glb',
                     'message': 'The GLB file is available in the database',
-                    'download_url': f'api/models/export/{file_id}/glb/',
+                    'download_url': f'/api/models/export/{file_id}/glb/',
                     'has_json': False, 
                     'project_info': {
                         'title': user_model.title,
@@ -1415,6 +1425,7 @@ def login_user(request):
         'success': False,
         'error': 'Only the POST method is allowed'
     }, status=405)
+
 @csrf_exempt
 def proxy_overpass(request):
     if request.method == 'OPTIONS':
@@ -1427,23 +1438,42 @@ def proxy_overpass(request):
     if request.method == 'POST':
         try:
             query = request.body.decode('utf-8')
+            
             headers = {
                 'Content-Type': 'text/plain',
-                'Accept': '*/*',
-                'User-Agent': 'curl/8.0.0'
+                'Accept': 'application/json, text/plain, */*',  # ← modificat
+                'User-Agent': 'ELMC-3D-Platform/1.0 (https://elmc-3d.ro; contact@elmc-3d.ro)',  # ← User-Agent valid
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br'
             }
             
             response = requests.post(
                 'https://overpass-api.de/api/interpreter',
                 data=query,
                 headers=headers,
-                timeout=60
+                timeout=90, 
+                allow_redirects=True
             )
+            
             if response.status_code == 200:
-                return HttpResponse(
-                    response.content,
-                    content_type='application/json'
-                )
+                try:
+                    json.loads(response.content)
+                    return HttpResponse(
+                        response.content,
+                        content_type='application/json'
+                    )
+                except json.JSONDecodeError:
+                    return HttpResponse(
+                        response.content,
+                        content_type='text/plain',
+                        status=200
+                    )
+            elif response.status_code == 429: 
+                print("Rate limit exceeded on Overpass API")
+                return JsonResponse({
+                    'error': 'Too many requests. Please wait a moment and try again.',
+                    'retry_after': response.headers.get('Retry-After', 30)
+                }, status=429)
             else:
                 return HttpResponse(
                     response.content,
@@ -1451,12 +1481,14 @@ def proxy_overpass(request):
                     content_type='text/plain'
                 )
             
+        except requests.exceptions.Timeout:
+            print("Overpass API timeout")
+            return JsonResponse({'error': 'Request timeout. The area might be too large.'}, status=504)
         except Exception as e:
             print(f"Error: {e}")
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
-
 def get_user_profile(request):
     token = request.headers.get('Authorization', '').replace('Bearer ', '')
     

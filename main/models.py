@@ -75,7 +75,7 @@ class UserModel(Document):
     glb_export_time = DateTimeField()
     total_elements = IntField(default=0)
     file_size_mb = FloatField(default=0.0)
-    favorites = ListField(ReferenceField(User))
+    favorites = ListField(StringField())
     building_count = IntField(default=0)
     highway_count = IntField(default=0)
     water_count = IntField(default=0)
