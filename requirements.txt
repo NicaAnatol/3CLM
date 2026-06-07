@@ -36,3 +36,12 @@ django-redis==5.4.0
 
 gunicorn==23.0.0
 whitenoise==6.9.0
+
+drf-yasg==1.21.8
+django-cors-headers==4.6.0
+gunicorn==23.0.0
+graphene==3.4
+graphene - django ==3.2.2
+behave ==1.2.6
+requests - toolbelt ==1.0.0
+sseclient - py ==1.8.0

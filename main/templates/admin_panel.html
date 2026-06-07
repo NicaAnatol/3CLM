@@ -1,0 +1,142 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - ELMC 3D</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/admin_panel.css' %}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+</head>
+<body>
+<div class="admin-container">
+    <button class="back-btn" onclick="window.location.href='/'" title="Back to homepage">
+        <i class="fas fa-arrow-left"></i> <span>Back</span>
+    </button>
+    <h1><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="users"><i class="fas fa-users"></i> Users</button>
+        <button class="tab-btn" data-tab="models"><i class="fas fa-cube"></i> Models</button>
+        <button class="tab-btn" data-tab="stats"><i class="fas fa-chart-bar"></i> Statistics</button>
+    </div>
+
+    <!-- Users Tab -->
+    <div id="users-tab" class="tab-content active">
+        <div class="search-bar">
+            <input type="text" id="userSearch" placeholder="Search by username or email...">
+            <button class="btn btn-primary" id="searchUsersBtn"><i class="fas fa-search"></i> Search</button>
+            <button class="btn btn-primary" id="createUserBtn"><i class="fas fa-user-plus"></i> Create User</button>
+        </div>
+        <div class="table-wrapper">
+            <div id="usersTable"></div>
+        </div>
+        <div id="usersPagination" style="margin-top: 20px; text-align: center;"></div>
+    </div>
+
+    <!-- Models Tab -->
+    <div id="models-tab" class="tab-content">
+        <div class="search-bar">
+            <input type="text" id="modelSearch" placeholder="Search by title or username...">
+            <button class="btn btn-primary" id="searchModelsBtn"><i class="fas fa-search"></i> Search</button>
+        </div>
+        <div class="table-wrapper">
+            <div id="modelsTable"></div>
+        </div>
+        <div id="modelsPagination" style="margin-top: 20px; text-align: center;"></div>
+    </div>
+
+    <!-- Statistics Tab -->
+    <div id="stats-tab" class="tab-content">
+        <svg style="position: absolute; width: 0; height: 0;">
+            <defs>
+                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#667eea"/>
+                    <stop offset="100%" stop-color="#764ba2"/>
+                </linearGradient>
+            </defs>
+        </svg>
+        <div id="statsGrid"></div>
+    </div>
+</div>
+
+<!-- Create/Edit User Modal -->
+<div id="userModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h3 id="modalTitle"><i class="fas fa-user-plus"></i> Create User</h3>
+        <input type="text" id="modalUsername" placeholder="Username">
+        <input type="email" id="modalEmail" placeholder="Email">
+        <input type="password" id="modalPassword" placeholder="Password">
+        <label>
+            <input type="checkbox" id="modalIsAdmin"> 
+            <i class="fas fa-shield-alt"></i> Admin privileges
+        </label>
+        <div class="modal-buttons">
+            <button class="btn btn-primary" id="saveUserBtn"><i class="fas fa-save"></i> Save</button>
+            <button class="btn" id="closeModalBtn" style="background:#334155;"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- 3D Viewer Modal for Admin -->
+<div class="modal" id="viewerModal" style="display: none;">
+    <div class="modal-content" style="max-width: 90%; height: 90vh;">
+        <div class="modal-header">
+            <h2 id="viewerTitle">3D Viewer</h2>
+            <button class="close-modal" onclick="closeAdminViewer()">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 0; height: calc(100% - 60px);">
+            <div id="viewerContainer" style="width: 100%; height: 100%; position: relative;">
+                <canvas id="modelCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+                
+                <div style="position: absolute; top: 20px; right: 20px; z-index: 1000;">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button onclick="resetAdminCamera()" id="resetCameraBtnAdmin" style="background: rgba(30, 41, 59, 0.8); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-sync-alt"></i> Reset Camera
+                        </button>
+                        <button onclick="toggleAdminAutoRotate()" id="autoRotateBtnAdmin" style="background: rgba(30, 41, 59, 0.8); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-rotate"></i> Auto Rotate: ON
+                        </button>
+                        <button onclick="toggleAdminWireframe()" id="wireframeToggleBtnAdmin" style="background: rgba(30, 41, 59, 0.8); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-code"></i> Wireframe: OFF
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="viewerLoading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 23, 42, 0.9); padding: 20px 40px; border-radius: 10px; display: none; z-index: 1000; flex-direction: column; align-items: center;">
+                    <div class="spinner" style="width: 40px; height: 40px; margin: 0 auto 15px;"></div>
+                    <p style="color: white; text-align: center;">Loading model...</p>
+                </div>
+                
+                <div id="modelInfoPanel" style="position: absolute; bottom: 20px; left: 20px; background: rgba(15, 23, 42, 0.95); padding: 15px; border-radius: 8px; max-width: 350px; min-width: 250px; display: none; z-index: 1000; border: 1px solid #334155; backdrop-filter: blur(10px);">
+                    <button onclick="toggleAdminInfoPanel()" id="toggleInfoBtn" style="position: absolute; top: 10px; right: 10px; background: none; color: #94a3b8; border: none; padding: 5px; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <h4 style="color: #f1f5f9; margin-bottom: 10px;">Model Information</h4>
+                    <div style="color: #cbd5e1; font-size: 14px;">
+                        <div><strong>Name:</strong> <span id="infoName">-</span></div>
+                        <div><strong>Elements:</strong> <span id="infoElements">0</span></div>
+                        <div><strong>Buildings:</strong> <span id="infoBuildings">0</span></div>
+                        <div><strong>Size:</strong> <span id="infoSize">0 MB</span></div>
+                        <div><strong>Author:</strong> <span id="infoAuthor">-</span></div>
+                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #334155;">
+                            <strong>Description:</strong><br>
+                            <div id="infoDescription" style="margin-top: 5px; max-height: 100px; overflow-y: auto; font-size: 13px;">-</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button onclick="showAdminInfoPanel()" id="showInfoBtn" style="position: absolute; bottom: 20px; left: 20px; background: rgba(102, 126, 234, 0.9); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: none; align-items: center; gap: 8px; z-index: 1000;">
+                    <i class="fas fa-info-circle"></i> Show Info
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/admin_panel.js' %}"></script>
+</body>
+</html>

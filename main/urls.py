@@ -5,7 +5,7 @@ from . import views
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
-
+from . import admin_views
 schema_view = get_schema_view(
     openapi.Info(
         title="ELMC 3D API",
@@ -65,6 +65,15 @@ urlpatterns = [
     path('manifest.json', views.manifest_json, name='manifest_json'),
     path('offline/', views.offline_view, name='offline'),
 
+    path('api/notifications/stream/', views.notification_stream, name='notification_stream'),
+    path('api/admin/users/', admin_views.admin_users, name='admin_users'),
+    path('api/admin/users/<str:user_id>/', admin_views.admin_user_detail, name='admin_user_detail'),
+    path('api/admin/models/', admin_views.admin_models, name='admin_models'),
+    path('api/admin/models/<str:model_id>/', admin_views.admin_model_delete, name='admin_model_delete'),
+    path('graphql/', admin_views.AdminGraphQLView.as_view(graphiql=True), name='graphql'),
+    path('admin-panel/', admin_views.admin_panel, name='admin_panel'),
+    path('api/admin/models/<str:model_id>/visibility/', admin_views.admin_model_toggle_visibility, name='admin_model_toggle_visibility'),
+    path('api/admin/glb/<str:file_id>/', admin_views.get_admin_glb_file, name='get_admin_glb_file'),
     
     path('api-docs/pages/intro/', views.doc_intro),
     path('api-docs/pages/home/', views.doc_home),
@@ -77,13 +86,13 @@ urlpatterns = [
     path('api-docs/auth/login/', views.doc_login),
     path('api-docs/auth/logout/', views.doc_logout),
     path('api-docs/auth/profile/', views.doc_get_profile),
-    path('api-docs/users/me/', views.doc_get_profile),
-    path('api-docs/users/me/profile/', views.doc_update_profile),
-    path('api-docs/users/me/password/', views.doc_change_password),
-    path('api-docs/users/me/stats/', views.doc_account_stats),
-    path('api-docs/users/me/models/', views.doc_user_models_detailed),
-    path('api-docs/users/me/favorites/', views.doc_user_favorites),
-    path('api-docs/users/me/', views.doc_delete_account),
+    path('api-docs/users/', views.doc_get_profile),
+    path('api-docs/users/profile/', views.doc_update_profile),
+    path('api-docs/users/password/', views.doc_change_password),
+    path('api-docs/users/stats/', views.doc_account_stats),
+    path('api-docs/users/models/', views.doc_user_models_detailed),
+    path('api-docs/users/favorites/', views.doc_user_favorites),
+    path('api-docs/users/', views.doc_delete_account),
     path('api-docs/models/import/', views.doc_save_data),
     path('api-docs/models/export/', views.doc_save_export),
     path('api-docs/models/<str:file_id>/', views.doc_update_model),
@@ -109,7 +118,16 @@ urlpatterns = [
     path('api-docs/health/', views.doc_health),
     path('api-docs/session/', views.doc_session_info),
     path('api-docs/cache/', views.doc_clear_data),
-
+    path('api-docs/admin/users/', views.doc_admin_users, name='doc_admin_users'),
+    path('api-docs/admin/users/create/', views.doc_admin_create_user, name='doc_admin_create_user'),
+    path('api-docs/admin/users/<str:user_id>/', views.doc_admin_user_detail, name='doc_admin_user_detail'),
+    path('api-docs/admin/users/<str:user_id>/update/', views.doc_admin_update_user, name='doc_admin_update_user'),
+    path('api-docs/admin/users/<str:user_id>/delete/', views.doc_admin_delete_user, name='doc_admin_delete_user'),
+    path('api-docs/admin/models/', views.doc_admin_models, name='doc_admin_models'),
+    path('api-docs/admin/models/<str:model_id>/delete/', views.doc_admin_delete_model, name='doc_admin_delete_model'),
+    path('api-docs/admin/models/<str:model_id>/visibility/', views.doc_admin_toggle_visibility, name='doc_admin_toggle_visibility'),
+    path('api-docs/admin/glb/<str:file_id>/', views.doc_admin_get_glb, name='doc_admin_get_glb'),
+    path('api-docs/notifications/stream/', views.doc_notification_stream, name='doc_notification_stream'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

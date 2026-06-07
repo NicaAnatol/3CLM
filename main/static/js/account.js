@@ -21,10 +21,8 @@ async function checkAuth() {
             currentUser = data.user;
             loadUserData();
             
-            
             window.modelsLoaded = false;
             window.favoritesLoaded = false;
-            
             
             const activeTab = document.querySelector('.tab-content.active');
             if (activeTab) {
@@ -35,7 +33,6 @@ async function checkAuth() {
                     loadFavoriteModels();
                 }
             }
-            
             setTimeout(updateMobileMenu, 100);
         } else {
             localStorage.removeItem('auth_token');
@@ -224,11 +221,23 @@ async function uploadProfilePicture(file) {
 }
 
 async function updateProfile(formData) {
+    // Verifică dacă formData are vreun câmp
+    console.log("pizada");
+    let hasData = false;
+    for (let pair of formData.entries()) {
+        hasData = true;
+        break;
+    }
+    if (!hasData) {
+        console.warn("updateProfile called with empty FormData – ignoring");
+        return;
+    }
+
     showLoading(true);
     
     try {
         const response = await fetch('/api/users/me/profile/', {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             },
@@ -256,7 +265,7 @@ async function changePassword(currentPassword, newPassword) {
     
     try {
         const response = await fetch('/api/users/me/password/', {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
@@ -1177,7 +1186,7 @@ async function toggleModelVisibility(fileId) {
     
     try {
         const response = await fetch(`/api/models/${fileId}/visibility/`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`

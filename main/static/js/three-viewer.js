@@ -1849,7 +1849,7 @@ async transmitThumbnailToServer(fileId, thumbnailData) {
         
         
         const response = await fetch(`/api/models/${fileId}/thumbnail/`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
@@ -1922,7 +1922,7 @@ async saveThumbnailToServer(fileId) {
         }
         
         const response = await fetch(`/api/models/${fileId}/thumbnail/`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,

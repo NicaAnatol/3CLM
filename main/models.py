@@ -21,6 +21,7 @@ class User(Document):
     id = StringField(primary_key=True, default=lambda: str(uuid.uuid4()))
     username = StringField(max_length=50, unique=True, required=True)
     email = StringField(max_length=255, unique=True, required=True)
+    is_admin = BooleanField(default=False)
     password = StringField(max_length=128, required=True)
     profile_picture = StringField()  # URL sau cale
     is_active = BooleanField(default=True)
@@ -39,7 +40,7 @@ class User(Document):
 
     def __str__(self):
         return self.username
-
+    
 class AuthToken(Document):
     user = ReferenceField(User)
     token = StringField(max_length=64, unique=True, required=True)

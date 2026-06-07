@@ -32,6 +32,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+import time
+import json
+from django.http import StreamingHttpResponse
+from .notifications import notification_manager
 
 def Intro(request):
     return render(request, 'Intro.html')
@@ -243,12 +247,8 @@ def service_worker_root(request):
     return response
 
 @csrf_exempt
-def model_router(request, file_id):
-    """Router care direcționează pe baza metodei HTTP"""
-    
-    # Verifică dacă acesta este de fapt un request pentru export
+def model_router(request, file_id):    
     if file_id == 'export' and request.method == 'POST':
-        # Redirecționează către save_export
         return save_export(request)
     
     if request.method == 'GET':
@@ -264,12 +264,13 @@ def model_router(request, file_id):
 def user_router(request):
     if request.method == 'GET':
         return get_user_profile(request)
-    elif request.method == 'PUT':
+    elif request.method == 'PATCH':
         return update_profile(request)
     elif request.method == 'DELETE':
         return delete_account(request)
     else:
         return JsonResponse({'error': f'Method {request.method} not allowed for this endpoint'}, status=405)
+    
 def service_worker(request):
     possible_paths = [
         os.path.join(settings.BASE_DIR, 'static', 'pwa', 'serviceworker.js'),
@@ -328,17 +329,23 @@ def account_page(request):
 @csrf_exempt
 @token_required
 def update_profile(request):
-    if request.method == 'PUT':
+    if request.method == 'PATCH':
         try:
             user = request.user
-            data = request.POST.dict()
-            
-            if 'profile_picture' in request.FILES:
-                profile_picture = request.FILES['profile_picture']
-                if user.profile_picture:
-                    user.profile_picture.delete(save=False)
-                user.profile_picture = profile_picture
-            
+            user_id = user.id
+
+            # Parsează datele (JSON sau form)
+            content_type = request.content_type or ''
+            if 'application/json' in content_type:
+                data = json.loads(request.body)
+                files = {}
+            else:
+                data = request.POST.dict()
+                files = request.FILES
+
+            update_data = {}
+
+            # ==================== USERNAME ====================
             if 'username' in data and data['username']:
                 new_username = data['username'].strip()
                 if new_username != user.username:
@@ -347,47 +354,135 @@ def update_profile(request):
                             'success': False,
                             'error': 'The username is already taken'
                         }, status=400)
-                    user.username = new_username
-            
+                    update_data['username'] = new_username
+                else:
+                    print(f"[update_profile] Username '{new_username}' is same as current, skipping")
+            else:
+                print("[update_profile] No 'username' field in request data")
+
+            # ==================== EMAIL ====================
             if 'email' in data and data['email']:
                 new_email = data['email'].strip().lower()
                 if new_email != user.email:
-                    if User.objects.filter(email=new_email).exclude(id=user.id).count() > 0:
+                    if User.objects.filter(email=new_email).count() > 0:
                         return JsonResponse({
                             'success': False,
                             'error': 'The email address is already registered'
                         }, status=400)
-                    user.email = new_email
-            
-            user.save()
-            
+                    update_data['email'] = new_email
+                else:
+                    print(f"[update_profile] Email '{new_email}' is same as current, skipping")
+            else:
+                print("[update_profile] No 'email' field in request data")
+
+            # ==================== PROFILE PICTURE ====================
+            profile_picture_file = files.get('profile_picture')
+            if profile_picture_file:
+                print(f"[update_profile] Received profile picture: {profile_picture_file.name}")
+                
+                # Creează directorul utilizatorului dacă nu există
+                user_media_dir = os.path.join(settings.MEDIA_ROOT, 'users', str(user_id), 'profile_pictures')
+                os.makedirs(user_media_dir, exist_ok=True)
+                
+                # Generează un nume unic pentru fișier
+                ext = os.path.splitext(profile_picture_file.name)[1].lower()
+                if ext not in ['.jpg', '.jpeg', '.png', '.gif']:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Only image files are allowed (jpg, jpeg, png, gif)'
+                    }, status=400)
+                
+                filename = f"profile_{uuid.uuid4().hex}{ext}"
+                file_path = os.path.join(user_media_dir, filename)
+                
+                # Salvează fișierul
+                with open(file_path, 'wb+') as dest:
+                    for chunk in profile_picture_file.chunks():
+                        dest.write(chunk)
+                
+                # Construiește URL-ul relativ
+                relative_path = os.path.join('users', str(user_id), 'profile_pictures', filename).replace('\\', '/')
+                profile_url = f"{settings.MEDIA_URL}{relative_path}"
+                
+                # Șterge vechea poză dacă există (opțional)
+                if user.profile_picture and not user.profile_picture.startswith('http'):
+                    old_path = os.path.join(settings.MEDIA_ROOT, user.profile_picture.replace(settings.MEDIA_URL, ''))
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                        print(f"[update_profile] Deleted old profile picture: {old_path}")
+                
+                update_data['profile_picture'] = profile_url
+                print(f"[update_profile] New profile picture saved at: {profile_url}")
+            else:
+                print("[update_profile] No 'profile_picture' file in request")
+
+            # ==================== ACTUALIZARE MONGODB ====================
+            if update_data:
+                print(f"[update_profile] Updating fields: {list(update_data.keys())}")
+                from pymongo import MongoClient
+                from django.conf import settings
+
+                client = MongoClient(settings.MONGODB_URI)
+                db = client.get_default_database()
+                collection = db['users']
+
+                result = collection.update_one(
+                    {'_id': user_id},
+                    {'$set': update_data}
+                )
+
+                if result.matched_count == 0:
+                    print(f"[update_profile] User with _id={user_id} not found in MongoDB")
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'User not found in database'
+                    }, status=404)
+
+                if result.modified_count == 0:
+                    print("[update_profile] Document matched but data already identical, no changes applied")
+                else:
+                    print(f"[update_profile] Successfully modified {result.modified_count} document(s)")
+
+                # Actualizează obiectul user din memorie
+                for key, value in update_data.items():
+                    setattr(user, key, value)
+            else:
+                print("[update_profile] No fields to update (update_data is empty)")
+
+            # ==================== RĂSPUNS ====================
+            profile_url = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcStltpfa69E9JTQOf5ZcyLGR8meBbxMFJxM0w&s'
+            if user.profile_picture:
+                profile_url = user.profile_picture
+
             return JsonResponse({
                 'success': True,
                 'message': 'Profile updated successfully',
                 'user': {
                     'id': str(user.id),
-                    'username': user.username,
-                    'email': user.email,
-                    'profile_picture': user.get_profile_picture_url(),
+                    'username': update_data.get('username', user.username),
+                    'email': update_data.get('email', user.email),
+                    'profile_picture': profile_url,
                     'models_count': user.models_count
                 }
             })
-            
+
         except Exception as e:
+            print(f"Error in update_profile: {str(e)}")
+            traceback.print_exc()
             return JsonResponse({
                 'success': False,
                 'error': f'Error updating profile: {str(e)}'
             }, status=500)
-    
+
     return JsonResponse({
         'success': False,
         'error': 'Only the PUT method is allowed'
     }, status=405)
-
+    
 @csrf_exempt
 @token_required
 def change_password(request):
-    if request.method == 'PUT':
+    if request.method == 'PATCH':
         try:
             data = json.loads(request.body)
             user = request.user
@@ -1334,15 +1429,15 @@ def register_user(request):
         'error': 'Only the POST method is allowed'
     }, status=405)
 
+# main/views.py - modifică funcția login_user
+
 @csrf_exempt
 def login_user(request):
     if request.method == 'POST':
         try:
-            print(" Login endpoint called")
             data = json.loads(request.body)
             email = data.get('email', '').strip().lower()
             password = data.get('password', '')
-            
             
             if not email or not password:
                 return JsonResponse({
@@ -1353,21 +1448,16 @@ def login_user(request):
             try:
                 users = User.objects.filter(email=email)
                 user = None
-                
                 for u in users:
                     if u.is_active:
                         user = u
                         break
-                
                 if not user:
                     return JsonResponse({
                         'success': False,
                         'error': 'Incorrect email or password'
                     }, status=401)
-                    
-                
             except Exception as db_error:
-                print(f" Database error: {str(db_error)}")
                 try:
                     user = User.objects.get(email=email)
                     if not user.is_active:
@@ -1382,23 +1472,18 @@ def login_user(request):
                     }, status=401)
             
             password_valid = user.check_password(password)
-            
             if not password_valid:
                 return JsonResponse({
                     'success': False,
                     'error': 'Incorrect email or password'
                 }, status=401)
             
-            old_tokens_count = AuthToken.objects.filter(user=user).count()
             AuthToken.objects.filter(user=user).delete()
-            
-            token = AuthToken(
-                user=user,
-                expires_at=timezone.now() + timedelta(days=30)
-            )
+            token = AuthToken(user=user, expires_at=timezone.now() + timedelta(days=30))
             token.save()
             
-            return JsonResponse({
+            # Setează cookie-ul pentru autentificare
+            response = JsonResponse({
                 'success': True,
                 'message': 'Login successful!',
                 'user': {
@@ -1411,11 +1496,22 @@ def login_user(request):
                 'expires_at': token.expires_at.isoformat()
             })
             
+            # Cookie sigur pentru autentificare
+            response.set_cookie(
+                'auth_token',
+                token.token,
+                max_age=30*24*60*60,  # 30 days
+                httponly=True,
+                samesite='Lax',
+                path='/'
+            )
+            
+            return response
+            
         except Exception as e:
-            print(f" ERROR in login: {str(e)}")
+            print(f"ERROR in login: {str(e)}")
             import traceback
             traceback.print_exc()
-            
             return JsonResponse({
                 'success': False,
                 'error': f'Authentication error: {str(e)}'
@@ -1905,6 +2001,9 @@ def save_export(request):
             if user_model.thumbnail:
                 thumbnail_url = f'{settings.MEDIA_URL}{user_model.thumbnail}'
             
+            # --- Notificare SSE în timp real (adaugată) ---
+            # --------------------------------------------
+
             response_data = {
                 'success': True,
                 'message': f'Project {action} successfully!',
@@ -2330,7 +2429,7 @@ To view the model, visit: https://elmc-3d.ro/view-3d/{file_id}/
 @csrf_exempt
 @token_required
 def update_project_thumbnail(request, file_id):
-    if request.method == 'PUT':
+    if request.method == 'PATCH':
         try:
             user = request.user
             data = json.loads(request.body)
@@ -2379,7 +2478,7 @@ def update_project_thumbnail(request, file_id):
     
     return JsonResponse({
         'success': False,
-        'error': 'Only the PUT method is allowed'
+        'error': 'Only the PATCH method is allowed'
     }, status=405)
 
 def get_project_thumbnail(request, file_id):
@@ -2470,7 +2569,11 @@ def update_model(request, file_id):
             if updates:
                 user_model.updated_at = timezone.now()
                 user_model.save()
-                
+                notification_manager.add_notification(
+                    user_id=str(user.id),
+                    message=f"Model '{user_model.title}' updated ({', '.join(updates)})",
+                    level='success'
+                )
                 response_data = {
                     'success': True,
                     'message': f'Model updated successfully ({", ".join(updates)})',
@@ -2919,7 +3022,48 @@ def increment_model_view(request, file_id):
     }, status=405)
    
 
+@csrf_exempt
+def notification_stream(request):
+    token = request.GET.get('token')
+    print(f"Token primit în SSE: {token[:20] if token else 'NICIUN'}...")
+    
+    if not token:
+        print("Niciun token - return 401")
+        return HttpResponse(status=401)
+    
+    try:
+        auth_token = AuthToken.objects.get(token=token, expires_at__gt=timezone.now())
+        user = auth_token.user
+        print(f"Utilizator autentificat: {user.username} (ID: {user.id})")
+    except AuthToken.DoesNotExist:
+        print(f"Token invalid sau expirat")
+        return HttpResponse(status=401)
+    
+    user_id = str(user.id)
 
+    def event_stream():
+        yield "event: connected\ndata: {}\n\n".format(json.dumps({"status": "ok", "user_id": user_id}))
+        print(f"Stream deschis pentru user {user_id}")
+        
+        last_heartbeat = time.time()
+        
+        while True:
+            if notification_manager.has_notifications(user_id):
+                notifications = notification_manager.get_notifications(user_id)  # ← corect
+                print(f"Trimitem {len(notifications)} notificări către {user_id}")
+                for notif in notifications:
+                    yield "event: notification\ndata: {}\n\n".format(json.dumps(notif))
+            
+            if time.time() - last_heartbeat > 30:
+                yield "event: heartbeat\ndata: {}\n\n".format(json.dumps({"timestamp": time.time()}))
+                last_heartbeat = time.time()
+            
+            time.sleep(1)
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
 
 
 @csrf_exempt
@@ -3070,7 +3214,7 @@ def get_model_stats(request, file_id):
 @csrf_exempt
 @token_required
 def toggle_model_visibility(request, file_id):
-    if request.method == 'PUT':
+    if request.method == 'PATCH':
         try:
             user = request.user
 
@@ -3105,7 +3249,7 @@ def toggle_model_visibility(request, file_id):
     
     return JsonResponse({
         'success': False,
-        'error': 'Only the PUT method is allowed'
+        'error': 'Only the PATCH method is allowed'
     }, status=405)
 
 
@@ -3449,7 +3593,11 @@ def delete_account(request):
                     print(f"Error deleting profile picture: {str(e)}")
             
             AuthToken.objects.filter(user=user).delete()
-            
+            notification_manager.add_notification(
+                user_id=str(user.id),
+                message=f"Your account has been permanently deleted.",
+                level='warning'
+            )
             user.delete()
             
             return JsonResponse({
@@ -3476,7 +3624,6 @@ def delete_account(request):
         'error': 'Only the DELETE method is allowed'
     }, status=405)
 
-# ==================== PAGES (HTML Templates) ====================
 
 @swagger_auto_schema(
     method='get',
@@ -3618,8 +3765,6 @@ def doc_offline(request):
         'features': ['Offline notification', 'Retry connection button', 'Cache management']
     })
 
-
-# ==================== AUTHENTICATION ====================
 
 @swagger_auto_schema(
     method='post',
@@ -3813,10 +3958,8 @@ def doc_get_profile(request):
     })
 
 
-# ==================== ACCOUNT MANAGEMENT ====================
-
 @swagger_auto_schema(
-    method='put',
+    method='patch',
     operation_summary="Update user profile",
     operation_description="Updates username, email, or profile picture",
     tags=['Account'],
@@ -3837,11 +3980,11 @@ def doc_get_profile(request):
         401: 'Unauthorized'
     }
 )
-@api_view(['PUT'])
+@api_view(['PATCH'])
 def doc_update_profile(request):
     return Response({
         'endpoint': '/api/users/me/profile/',
-        'method': 'PUT',
+        'method': 'PATCH',
         'authentication': 'Bearer token required',
         'content_type': 'multipart/form-data',
         'request_body': {
@@ -3862,7 +4005,7 @@ def doc_update_profile(request):
 
 
 @swagger_auto_schema(
-    method='put',
+    method='patch',
     operation_summary="Change password",
     operation_description="Changes user password and invalidates all existing tokens",
     tags=['Account'],
@@ -3883,11 +4026,11 @@ def doc_update_profile(request):
         401: 'Unauthorized'
     }
 )
-@api_view(['PUT'])
+@api_view(['PATCH'])
 def doc_change_password(request):
     return Response({
         'endpoint': '/api/users/me/password/',
-        'method': 'PUT',
+        'method': 'PATCH',
         'authentication': 'Bearer token required',
         'content_type': 'application/json',
         'request_body': {
@@ -4089,7 +4232,6 @@ def doc_delete_account(request):
         }
     })
 
-# ==================== MODEL MANAGEMENT ====================
 
 @swagger_auto_schema(
     method='post',
@@ -4263,7 +4405,7 @@ def doc_delete_model(request, file_id=None):
 
 
 @swagger_auto_schema(
-    method='put',
+    method='patch',
     operation_summary="Toggle model visibility",
     operation_description="Makes model public or private",
     tags=['Model Management'],
@@ -4272,11 +4414,11 @@ def doc_delete_model(request, file_id=None):
     ],
     responses={200: 'Visibility toggled successfully'}
 )
-@api_view(['PUT'])
+@api_view(['PATCH'])
 def doc_toggle_visibility(request, file_id=None):
     return Response({
         'endpoint': f'/api/models/{file_id or "{file_id}"}/visibility/',
-        'method': 'PUT',
+        'method': 'PATCH',
         'authentication': 'Bearer token required',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
         'response': {
@@ -4288,7 +4430,6 @@ def doc_toggle_visibility(request, file_id=None):
     })
 
 
-# ==================== WORKSHOP ====================
 
 @swagger_auto_schema(
     method='get',
@@ -4466,7 +4607,6 @@ def doc_featured_models(request):
     })
 
 
-# ==================== UTILITIES ====================
 
 @swagger_auto_schema(
     method='get',
@@ -4588,8 +4728,7 @@ def doc_download_file(request, filename):
         'error_responses': {404: {'success': False, 'error': 'The file was not found'}}
     })
 
-
-# ==================== FILES ====================
+    
 
 @swagger_auto_schema(
     method='get',
@@ -4668,9 +4807,6 @@ def doc_download_model_archive(request, file_id):
         }
     })
 
-
-# ==================== TEXTURES ====================
-
 @swagger_auto_schema(
     method='get',
     operation_summary="Get texture image",
@@ -4727,7 +4863,6 @@ def doc_available_textures(request):
     })
 
 
-# ==================== WORKSHOP (additional) ====================
 
 @swagger_auto_schema(
     method='post',
@@ -4757,10 +4892,8 @@ def doc_increment_model_view(request, file_id):
     })
 
 
-# ==================== PROJECT ====================
-
 @swagger_auto_schema(
-    method='put',
+    method='patch',
     operation_summary="Update project thumbnail",
     operation_description="Updates project thumbnail and camera position",
     tags=['Project'],
@@ -4785,11 +4918,11 @@ def doc_increment_model_view(request, file_id):
     ),
     responses={200: 'Thumbnail updated', 404: 'Project not found'}
 )
-@api_view(['PUT'])
+@api_view(['PATCH'])
 def doc_update_project_thumbnail(request, file_id):
     return Response({
         'endpoint': f'/api/models/{file_id}/thumbnail/',
-        'method': 'PUT',
+        'method': 'PATCH',
         'authentication': 'Bearer token required',
         'path_parameters': {'file_id': {'type': 'string', 'required': True}},
         'request_body': {
@@ -4856,7 +4989,6 @@ def doc_get_camera_position(request, file_id):
     })
 
 
-# ==================== UTILITIES (additional) ====================
 
 @swagger_auto_schema(
     method='get',
@@ -4893,7 +5025,320 @@ def doc_session_info(request):
         }
     })
     
-    
+
+@swagger_auto_schema(
+    method='get',
+    operation_summary="List all users (admin)",
+    operation_description="Returns paginated list of all users with search. Requires admin authentication.",
+    tags=['Admin'],
+    manual_parameters=[
+        openapi.Parameter('page', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='Page number', default=1),
+        openapi.Parameter('per_page', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='Items per page', default=20),
+        openapi.Parameter('search', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Search by username or email'),
+    ],
+    responses={200: 'List of users', 401: 'Unauthorized', 403: 'Forbidden (not admin)'}
+)
+@api_view(['GET'])
+def doc_admin_users(request):
+    return Response({
+        'endpoint': '/api/admin/users/',
+        'method': 'GET',
+        'authentication': 'Admin required (Bearer token)',
+        'query_parameters': {
+            'page': 'integer (default 1)',
+            'per_page': 'integer (default 20)',
+            'search': 'string (optional)'
+        },
+        'response': {
+            'success': True,
+            'users': [
+                {
+                    'id': 'uuid',
+                    'username': 'string',
+                    'email': 'string',
+                    'is_admin': 'boolean',
+                    'created_at': 'ISO date',
+                    'models_count': 'integer'
+                }
+            ],
+            'total': 'integer',
+            'page': 'integer',
+            'per_page': 'integer'
+        }
+    })
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Create a new user (admin)",
+    operation_description="Creates a user account. Requires admin authentication.",
+    tags=['Admin'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['username', 'email', 'password'],
+        properties={
+            'username': openapi.Schema(type=openapi.TYPE_STRING),
+            'email': openapi.Schema(type=openapi.TYPE_STRING, format='email'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, minLength=6),
+            'is_admin': openapi.Schema(type=openapi.TYPE_BOOLEAN, default=False),
+        }
+    ),
+    responses={200: 'User created', 400: 'Validation error', 401: 'Unauthorized'}
+)
+@api_view(['POST'])
+def doc_admin_create_user(request):
+    return Response({
+        'endpoint': '/api/admin/users/',
+        'method': 'POST',
+        'authentication': 'Admin required (Bearer token)',
+        'request_body': {
+            'username': 'string (required)',
+            'email': 'string (required)',
+            'password': 'string (min 6)',
+            'is_admin': 'boolean (optional, default false)'
+        },
+        'response': {
+            'success': True,
+            'message': 'User created',
+            'user_id': 'uuid'
+        }
+    })
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_summary="Get user details (admin)",
+    operation_description="Returns detailed information about a specific user, including their models. Requires admin authentication.",
+    tags=['Admin'],
+    manual_parameters=[
+        openapi.Parameter('user_id', openapi.IN_PATH, type=openapi.TYPE_STRING, required=True, description='User ID'),
+    ],
+    responses={200: 'User details', 404: 'User not found', 401: 'Unauthorized'}
+)
+@api_view(['GET'])
+def doc_admin_user_detail(request, user_id):
+    return Response({
+        'endpoint': f'/api/admin/users/{user_id}/',
+        'method': 'GET',
+        'authentication': 'Admin required (Bearer token)',
+        'path_parameters': {'user_id': 'string (UUID)'},
+        'response': {
+            'success': True,
+            'user': {
+                'id': 'uuid',
+                'username': 'string',
+                'email': 'string',
+                'is_admin': 'boolean',
+                'created_at': 'ISO date',
+                'models': [
+                    {
+                        'id': 'uuid',
+                        'file_id': 'string',
+                        'title': 'string',
+                        'is_public': 'boolean',
+                        'created_at': 'ISO date'
+                    }
+                ]
+            }
+        }
+    })
+
+
+@swagger_auto_schema(
+    method='patch',
+    operation_summary="Update user (admin)",
+    operation_description="Updates user information (username, email, password, admin status). Requires admin authentication.",
+    tags=['Admin'],
+    manual_parameters=[
+        openapi.Parameter('user_id', openapi.IN_PATH, type=openapi.TYPE_STRING, required=True, description='User ID'),
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'username': openapi.Schema(type=openapi.TYPE_STRING),
+            'email': openapi.Schema(type=openapi.TYPE_STRING, format='email'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, minLength=6),
+            'is_admin': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+        }
+    ),
+    responses={200: 'User updated', 400: 'Validation error', 404: 'User not found', 401: 'Unauthorized'}
+)
+@api_view(['PATCH'])
+def doc_admin_update_user(request, user_id):
+    return Response({
+        'endpoint': f'/api/admin/users/{user_id}/',
+        'method': 'PATCH',
+        'authentication': 'Admin required (Bearer token)',
+        'path_parameters': {'user_id': 'string (UUID)'},
+        'request_body': {
+            'username': 'string (optional)',
+            'email': 'string (optional)',
+            'password': 'string (optional, min 6)',
+            'is_admin': 'boolean (optional)'
+        },
+        'response': {'success': True, 'message': 'User updated'}
+    })
+
+
+@swagger_auto_schema(
+    method='delete',
+    operation_summary="Delete user (admin)",
+    operation_description="Permanently deletes a user and all associated models. Requires admin authentication.",
+    tags=['Admin'],
+    manual_parameters=[
+        openapi.Parameter('user_id', openapi.IN_PATH, type=openapi.TYPE_STRING, required=True, description='User ID'),
+    ],
+    responses={200: 'User deleted', 404: 'User not found', 401: 'Unauthorized'}
+)
+@api_view(['DELETE'])
+def doc_admin_delete_user(request, user_id):
+    return Response({
+        'endpoint': f'/api/admin/users/{user_id}/',
+        'method': 'DELETE',
+        'authentication': 'Admin required (Bearer token)',
+        'path_parameters': {'user_id': 'string (UUID)'},
+        'response': {'success': True, 'message': 'User deleted'}
+    })
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_summary="List all models (admin)",
+    operation_description="Returns paginated list of all models with optional filtering by user and search. Requires admin authentication.",
+    tags=['Admin'],
+    manual_parameters=[
+        openapi.Parameter('page', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='Page number', default=1),
+        openapi.Parameter('per_page', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='Items per page', default=20),
+        openapi.Parameter('user_id', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Filter by user ID'),
+        openapi.Parameter('search', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Search by title or username'),
+    ],
+    responses={200: 'List of models', 401: 'Unauthorized', 403: 'Forbidden'}
+)
+@api_view(['GET'])
+def doc_admin_models(request):
+    return Response({
+        'endpoint': '/api/admin/models/',
+        'method': 'GET',
+        'authentication': 'Admin required (Bearer token)',
+        'query_parameters': {
+            'page': 'integer (default 1)',
+            'per_page': 'integer (default 20)',
+            'user_id': 'UUID (optional)',
+            'search': 'string (optional)'
+        },
+        'response': {
+            'success': True,
+            'models': [
+                {
+                    'id': 'uuid',
+                    'file_id': 'string',
+                    'title': 'string',
+                    'is_public': 'boolean',
+                    'created_at': 'ISO date',
+                    'total_elements': 'integer',
+                    'file_size_mb': 'float',
+                    'public_view_count': 'integer',
+                    'download_count': 'integer',
+                    'has_glb_export': 'boolean',
+                    'user': {'id': 'uuid', 'username': 'string'}
+                }
+            ],
+            'total': 'integer',
+            'page': 'integer',
+            'per_page': 'integer'
+        }
+    })
+
+
+@swagger_auto_schema(
+    method='delete',
+    operation_summary="Delete model (admin)",
+    operation_description="Permanently deletes a model and its associated files. Requires admin authentication.",
+    tags=['Admin'],
+    manual_parameters=[
+        openapi.Parameter('model_id', openapi.IN_PATH, type=openapi.TYPE_STRING, required=True, description='Model ID'),
+    ],
+    responses={200: 'Model deleted', 404: 'Model not found', 401: 'Unauthorized'}
+)
+@api_view(['DELETE'])
+def doc_admin_delete_model(request, model_id):
+    return Response({
+        'endpoint': f'/api/admin/models/{model_id}/',
+        'method': 'DELETE',
+        'authentication': 'Admin required (Bearer token)',
+        'path_parameters': {'model_id': 'string (UUID)'},
+        'response': {'success': True, 'message': 'Model deleted'}
+    })
+
+
+@swagger_auto_schema(
+    method='patch',
+    operation_summary="Toggle model visibility (admin)",
+    operation_description="Makes a model public or private. Requires admin authentication.",
+    tags=['Admin'],
+    manual_parameters=[
+        openapi.Parameter('model_id', openapi.IN_PATH, type=openapi.TYPE_STRING, required=True, description='Model ID'),
+    ],
+    responses={200: 'Visibility toggled', 404: 'Model not found', 401: 'Unauthorized'}
+)
+@api_view(['PATCH'])
+def doc_admin_toggle_visibility(request, model_id):
+    return Response({
+        'endpoint': f'/api/admin/models/{model_id}/visibility/',
+        'method': 'PATCH',
+        'authentication': 'Admin required (Bearer token)',
+        'path_parameters': {'model_id': 'string (UUID)'},
+        'response': {'success': True, 'is_public': 'boolean'}
+    })
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_summary="Get GLB file (admin)",
+    operation_description="Downloads the GLB file of any model (public or private). Requires admin authentication.",
+    tags=['Admin'],
+    manual_parameters=[
+        openapi.Parameter('file_id', openapi.IN_PATH, type=openapi.TYPE_STRING, required=True, description='File identifier (file_id of the model)'),
+    ],
+    responses={200: 'GLB binary file', 404: 'GLB not found', 401: 'Unauthorized'}
+)
+@api_view(['GET'])
+def doc_admin_get_glb(request, file_id):
+    return Response({
+        'endpoint': f'/api/admin/glb/{file_id}/',
+        'method': 'GET',
+        'authentication': 'Admin required (Bearer token)',
+        'path_parameters': {'file_id': 'string'},
+        'response': 'Binary GLB file (Content-Type: model/gltf-binary)'
+    })
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_summary="Server-Sent Events (SSE) stream",
+    operation_description="Opens a persistent connection for real-time notifications. The client receives events like 'connected', 'notification', and 'heartbeat'. Requires authentication token as query parameter.",
+    tags=['Notifications'],
+    manual_parameters=[
+        openapi.Parameter('token', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=True, description='Authentication token (Bearer token)'),
+    ],
+    responses={200: 'SSE stream', 401: 'Unauthorized'}
+)
+@api_view(['GET'])
+def doc_notification_stream(request):
+    return Response({
+        'endpoint': '/api/notifications/stream/',
+        'method': 'GET',
+        'authentication': 'Bearer token required as query param `?token=...`',
+        'query_parameters': {
+            'token': 'string (required)'
+        },
+        'response': 'text/event-stream with events: connected, notification, heartbeat',
+        'example_events': [
+            'event: connected\ndata: {"status":"ok","user_id":"..."}',
+            'event: notification\ndata: {"type":"notification","level":"success","message":"...","timestamp":...}',
+            'event: heartbeat\ndata: {"timestamp":...}'
+        ]
+    })    
     
 def api_docs(request):
     docs = {
@@ -4923,8 +5368,8 @@ def api_docs(request):
             },
             'users': {
                 '/api/users/me/': 'GET - Get current user profile | DELETE - Delete account',
-                '/api/users/me/profile/': 'PUT - Update user profile',
-                '/api/users/me/password/': 'PUT - Change password',
+                '/api/users/me/profile/': 'PATCH - Update user profile',
+                '/api/users/me/password/': 'PATCH - Change password',
                 '/api/users/me/stats/': 'GET - Get account statistics',
                 '/api/users/me/models/': 'GET - Get user models (basic)',
                 '/api/users/me/models/detailed/': 'GET - Get detailed user models',
@@ -4952,7 +5397,7 @@ def api_docs(request):
                     'GET /api/models/export/<file_id>/glb/': 'Get GLB file (inline view)',
                     'GET /api/models/export/<file_id>/': 'Download GLB file',
                     'GET /api/models/<file_id>/thumbnail/': 'Get thumbnail image URL',
-                    'PUT /api/models/<file_id>/thumbnail/': 'Update project thumbnail',
+                    'PATCH /api/models/<file_id>/thumbnail/': 'Update project thumbnail',
                     'GET /api/models/<file_id>/thumbnail/image/': 'Get thumbnail image file',
                     'GET /api/models/<file_id>/camera/': 'Get saved camera position'
                 }
@@ -4988,7 +5433,7 @@ def api_docs(request):
                 'url': '/api/models/import/',
                 'headers': {'Content-Type': 'application/json', 'Authorization': 'Bearer <token>'},
                 'body': {
-                    'geojson': {'type': 'FeatureCollection', 'features': [...]},
+                    'geojson': {'type': 'FeatureCollection', 'features': "[...]"},
                     'bounds': {'north': 45.5, 'south': 45.4, 'east': 9.2, 'west': 9.1},
                     'origin': [0, 0],
                     'dataType': 'building'

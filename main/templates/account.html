@@ -399,6 +399,42 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
+initNotifications();
+function initNotifications() {
+    const token = localStorage.getItem('auth_token');
+    console.log('Inițializare SSE pentru notificări');
+    if (!token) {
+        console.log('Nu există token - SSE nu pornește');
+        return;
+    }
+
+    console.log('Token găsit, inițializare EventSource...');
+    const eventSource = new EventSource('/api/notifications/stream/?token=' + encodeURIComponent(token));
+    
+    eventSource.onopen = function() {
+        console.log('SSE conectat cu succes');
+    };
+    
+    eventSource.onerror = function(err) {
+        console.error('SSE eroare:', err);
+        eventSource.close();
+        setTimeout(initNotifications, 10000);
+    };
+    
+    eventSource.addEventListener('connected', function(e) {
+        console.log('Eveniment connected primit:', e.data);
+    });
+    
+    eventSource.addEventListener('notification', function(e) {
+        console.log('Notificare primită:', e.data);
+        const data = JSON.parse(e.data);
+        showMessage(data.message, data.level === 'success' ? 'success' : (data.level === 'error' ? 'error' : 'info'));
+    });
+    
+    eventSource.addEventListener('heartbeat', function(e) {
+        console.log('Heartbeat primit');
+    });
+}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>

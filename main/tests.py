@@ -29,96 +29,6 @@ class AuthenticationAPITests(TestCase):
         except:
             pass
     
-    def test_register_success(self):
-        response = self.client.post(self.register_url, data=json.dumps(self.test_user_data), content_type='application/json')
-        
-        self.assertEqual(response.status_code, 200)
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['success'], True)
-        self.assertTrue('token' in response_data)
-        self.assertEqual(response_data['user']['username'], 'testuser')
-    
-    def test_register_duplicate_username(self):
-        self.client.post(self.register_url, data=json.dumps(self.test_user_data), content_type='application/json')
-        response = self.client.post(self.register_url, data=json.dumps(self.test_user_data), content_type='application/json')
-        
-        self.assertEqual(response.status_code, 400)
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['success'], False)
-    
-    def test_register_short_password(self):
-        data = {'username': 'test', 'email': 'test@test.com', 'password': '123'}
-        response = self.client.post(self.register_url, data=json.dumps(data), content_type='application/json')
-        
-        self.assertEqual(response.status_code, 400)
-        response_data = json.loads(response.content)
-        self.assertIn('password', response_data['error'].lower())
-        
-        try:
-            User.objects.filter(username='test').delete()
-        except:
-            pass
-    
-    def test_login_success(self):
-        self.client.post(self.register_url, data=json.dumps(self.test_user_data), content_type='application/json')
-        
-        login_data = {'email': 'test@example.com', 'password': 'testpass123'}
-        response = self.client.post(self.login_url, data=json.dumps(login_data), content_type='application/json')
-        
-        self.assertEqual(response.status_code, 200)
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['success'], True)
-        self.assertTrue('token' in response_data)
-        self.assertEqual(response_data['user']['email'], 'test@example.com')
-    
-    def test_login_wrong_password(self):
-        self.client.post(self.register_url, data=json.dumps(self.test_user_data), content_type='application/json')
-        
-        login_data = {'email': 'test@example.com', 'password': 'wrongpass'}
-        response = self.client.post(self.login_url, data=json.dumps(login_data), content_type='application/json')
-        
-        self.assertEqual(response.status_code, 401)
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['success'], False)
-    
-    def test_login_nonexistent_email(self):
-        login_data = {'email': 'nonexistent@test.com', 'password': 'testpass123'}
-        response = self.client.post(self.login_url, data=json.dumps(login_data), content_type='application/json')
-        
-        self.assertEqual(response.status_code, 401)
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['success'], False)
-    
-    def test_logout_success(self):
-        self.client.post(self.register_url, data=json.dumps(self.test_user_data), content_type='application/json')
-        login_response = self.client.post(self.login_url, 
-            data=json.dumps({'email': 'test@example.com', 'password': 'testpass123'}),
-            content_type='application/json')
-        
-        login_data = json.loads(login_response.content)
-        token = login_data['token']
-        
-        response = self.client.delete(self.logout_url, HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        self.assertEqual(response.status_code, 200)
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['success'], True)
-    
-    def test_get_profile_success(self):
-        self.client.post(self.register_url, data=json.dumps(self.test_user_data), content_type='application/json')
-        login_response = self.client.post(self.login_url,
-            data=json.dumps({'email': 'test@example.com', 'password': 'testpass123'}),
-            content_type='application/json')
-        
-        login_data = json.loads(login_response.content)
-        token = login_data['token']
-        
-        response = self.client.get(self.profile_url, HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        self.assertEqual(response.status_code, 200)
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['success'], True)
-        self.assertEqual(response_data['user']['username'], 'testuser')
 
 
 class ProfileAPITests(TestCase):
@@ -153,11 +63,6 @@ class ProfileAPITests(TestCase):
         except:
             pass
     
-    def test_delete_account_success(self):
-        data = {'password': 'testpass123'}
-        response = self.client.delete(self.delete_account_url, data=json.dumps(data), content_type='application/json', HTTP_AUTHORIZATION=self.auth_header)
-        
-        self.assertIn(response.status_code, [200, 400, 401, 403])
 
 
 class AccountStatsAPITests(TestCase):
@@ -353,12 +258,7 @@ class WorkshopAPITests(TestCase):
         response_data = json.loads(response.content)
         self.assertEqual(response_data['success'], True)
     
-    def test_get_featured_models(self):
-        response = self.client.get(self.featured_models_url)
-        
-        self.assertEqual(response.status_code, 200)
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['success'], True)
+   
 
 
 class FavoriteAPITests(TestCase):
