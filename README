@@ -24,6 +24,7 @@ ELMC 3D is a progressive web application (PWA) that allows users to generate, ed
 - Authentication: JWT tokens stored in MongoDB
 - PWA: Service Worker + Manifest.json
 - API Documentation: OpenAPI 3.0 + Swagger UI + Redoc
+- API Tests django and behave + Gherkin
 
 ## Prerequisites
 
