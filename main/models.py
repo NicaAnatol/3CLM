@@ -1,4 +1,4 @@
-# main/models.py - rescris pentru mongoengine
+# main/models.py 
 from mongoengine import Document, StringField, IntField, BooleanField, DateTimeField, ReferenceField, ListField, FloatField, DictField, ImageField, FileField
 from django.contrib.auth.hashers import make_password, check_password
 import secrets
